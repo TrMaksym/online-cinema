@@ -1,9 +1,6 @@
 from typing import Optional, List
-
 from pydantic.v1 import BaseModel, constr, condecimal
 import uuid
-
-from database.models.movies import Star, Genre, Director
 
 
 class MovieSchema(BaseModel):
@@ -20,41 +17,61 @@ class MovieSchema(BaseModel):
     price: condecimal(max_digits=10, decimal_places=2)
     certification_id: int
 
-    stars: Optional[List[Star]] = []
-    genres: Optional[List[Genre]] = []
-    directors: Optional[List[Director]] = []
+    class Config:
+        orm_mode = True
 
 
 class CertificationsSchema(BaseModel):
     id: int
     name: constr(max_length=50)
 
+    class Config:
+        orm_mode = True
+
 
 class MovieStarSchema(BaseModel):
     movie_id: int
     star_id: int
+
+    class Config:
+        orm_mode = True
 
 
 class MovieGenreSchema(BaseModel):
     movie_id: int
     genre_id: int
 
+    class Config:
+        orm_mode = True
+
 
 class MovieDirectorSchema(BaseModel):
     movie_id: int
     director_id: int
+
+    class Config:
+        orm_mode = True
 
 
 class Genre(BaseModel):
     id: int
     name: constr(max_length=100)
 
+    class Config:
+        orm_mode = True
+
 
 class Star(BaseModel):
     id: int
     name: constr(max_length=100)
 
+    class Config:
+        orm_mode = True
+
 
 class Director(BaseModel):
     id: int
     name: constr(max_length=100)
+
+    class Config:
+        orm_mode = True
