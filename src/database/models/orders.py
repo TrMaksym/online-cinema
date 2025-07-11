@@ -2,9 +2,7 @@ from datetime import datetime
 from enum import Enum
 
 from sqlalchemy import Column, Integer, ForeignKey, DateTime, Enum, Numeric
-from sqlalchemy.orm import Mapped, relationship
-from sqlalchemy.testing.schema import mapped_column
-
+from sqlalchemy.orm import Mapped, relationship, mapped_column
 from database.models.base import Base
 
 
@@ -18,13 +16,15 @@ class Order(Base):
     __tablename__ = "orders"
 
     id = Column(Integer, primary_key=True)
-    user_id = Column(Integer, nullable=False)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
     created_at = Column(DateTime(timezone=True), nullable=False, default=datetime.utcnow)
     status: Mapped[OrderStatusEnum] = mapped_column(Enum(OrderStatusEnum), nullable=False, default=OrderStatusEnum.pending)
     total_amount = Column(Numeric(10, 2), nullable=True)
 
     user = relationship("User", back_populates="orders")
     order_items = relationship("OrderItem", back_populates="order", cascade="all, delete-orphan")
+    payments = relationship("Payment", back_populates="order")
+
 
 
 class OrderItem(Base):
@@ -37,3 +37,4 @@ class OrderItem(Base):
 
     order = relationship("Order", back_populates="order_items")
     movie = relationship("Movie")
+    payment_items = relationship("PaymentItem", back_populates="order_item")

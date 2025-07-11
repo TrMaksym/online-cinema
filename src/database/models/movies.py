@@ -35,7 +35,7 @@ class Genre(Base):
 
     id = Column(Integer, primary_key=True)
     name = Column(String(100), unique=True, nullable=False)
-    movie_genres = relationship("Movie", black_populates="genre")
+    movie_genres = relationship("Movie", back_populates="genre")
 
 
 class Star(Base):
@@ -43,7 +43,7 @@ class Star(Base):
 
     id = Column(Integer, primary_key=True)
     name = Column(String(100), unique=True, nullable=False)
-    movie_start = relationship("Movie", black_populates="star")
+    movie_start = relationship("Movie", back_populates="star")
 
 
 class Director(Base):
@@ -51,7 +51,7 @@ class Director(Base):
 
     id = Column(Integer, primary_key=True)
     name = Column(String(100), unique=True, nullable=False)
-    movie_directors = relationship("Movie", black_populates="director")
+    movie_directors = relationship("Movie", back_populates="director")
 
 
 class Certification(Base):
@@ -59,7 +59,7 @@ class Certification(Base):
 
     id = Column(Integer, primary_key=True)
     name = Column(String(100), unique=True, nullable=False)
-    movie_certifications = relationship("Movie", black_populates="certification")
+    movie_certifications = relationship("Movie", back_populates="certification")
 
 
 class Movie(Base):
