@@ -1,34 +1,35 @@
 from datetime import datetime, date, timedelta
 from typing import Optional
 
-from enum import Enum
-from sqlalchemy import Column, Integer, String, Boolean, DateTime, ForeignKey, Text, Date
+import enum
+from sqlalchemy import Column, Integer, String, Boolean, DateTime, ForeignKey, Text, Date, Enum
 from sqlalchemy.orm import relationship, Mapped, mapped_column
 
+from database.models.base import Base
 
-class UserGroupEnum(str, Enum):
+
+class UserGroupEnum(str, enum.Enum):
     USER = "USER"
     MODERATOR = "MODERATOR"
     ADMIN = "ADMIN"
 
-class GenderEnum(str, Enum):
+class GenderEnum(str, enum.Enum):
     MALE = "MALE"
     FEMALE = "FEMALE"
 
 class UserGroup(Base):
     __tablename__ = "user_groups"
     id = Column(Integer, primary_key=True)
-    name = Column(Enum(UserGroupEnum), unique=True, nullable=False)
-
+    name: Mapped[UserGroupEnum] = mapped_column(Enum(UserGroupEnum), nullable=False, unique=True)
     users = relationship("User", back_populates="group")
 
 class User(Base):
     __tablename__ = "users"
     id = Column(Integer, primary_key=True)
     email = Column(String, unique=True, nullable=False)
-    hashed_password = Column(String, nullbale=False)
+    hashed_password = Column(String, nullable=False)
     is_active = Column(Boolean, default=False)
-    created_at = Column(DateTime, defauly=datetime.now)
+    created_at = Column(DateTime, default=datetime.now)
     updated_at = Column(DateTime, onupdate=datetime.now)
     group_id = Column(Integer, ForeignKey("user_groups.id"), nullable=False)
     group = relationship("UserGroup", back_populates="users")
