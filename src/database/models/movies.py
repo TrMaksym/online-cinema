@@ -8,27 +8,26 @@ from sqlalchemy.testing.schema import mapped_column
 
 from database.models.base import Base
 
-
 movie_genres = Table(
-        "movie_genres",
-        Base.metadata,
-        Column("movie_id", ForeignKey("movies.id"), primary_key=True),
-        Column("genre_id", ForeignKey("genres.id"), primary_key=True)
-    )
+    "movie_genres",
+    Base.metadata,
+    Column("movie_id", ForeignKey("movies.id"), primary_key=True),
+    Column("genre_id", ForeignKey("genres.id"), primary_key=True)
+)
 
-    movie_directors = Table(
-        "movie_directors",
-        Base.metadata,
-        Column("movie_id", ForeignKey("movies.id"), primary_key=True),
-        Column("director_id", ForeignKey("directors.id"), primary_key=True)
-    )
+movie_directors = Table(
+    "movie_directors",
+    Base.metadata,
+    Column("movie_id", ForeignKey("movies.id"), primary_key=True),
+    Column("director_id", ForeignKey("directors.id"), primary_key=True)
+)
 
-    movie_stars = Table(
-        "movie_stars",
-        Base.metadata,
-        Column("movie_id", ForeignKey("movies.id"), primary_key=True),
-        Column("star_id", ForeignKey("stars.id"), primary_key=True)
-    )
+movie_stars = Table(
+    "movie_stars",
+    Base.metadata,
+    Column("movie_id", ForeignKey("movies.id"), primary_key=True),
+    Column("star_id", ForeignKey("stars.id"), primary_key=True)
+)
 
 
 class Genre(Base):
@@ -73,12 +72,11 @@ class Movie(Base):
     time = Column(Integer, nullable=False)
     imdb = Column(Float, nullable=False)
     votes = Column(Integer, nullable=False)
-    meta_score : Mapped[Optional[float]] = mapped_column(Float, nullable=True)
-    gross : Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    meta_score: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    gross: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
     description = Column(String(255), nullable=False)
-    price = Column(DECIMAL(10, 2), nullable=False )
+    price = Column(DECIMAL(10, 2), nullable=False)
     certification_id = Column(Integer, ForeignKey("certifications.id"), nullable=False)
-
 
     certification = relationship("Certification", backref="movies")
     genres = relationship("Genre", secondary=movie_genres, backref="movies")
