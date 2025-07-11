@@ -34,6 +34,7 @@ class User(Base):
     group_id = Column(Integer, ForeignKey("user_groups.id"), nullable=False)
     group = relationship("UserGroup", back_populates="users")
     profile = relationship("UserProfile", back_populates="user", uselist=False)
+    orders = relationship("Order", back_populates="user")
 
     activation_tokens = relationship("UserActivationToken", back_populates="user")
     reset_password_tokens = relationship("UserResetPasswordToken", back_populates="user")
