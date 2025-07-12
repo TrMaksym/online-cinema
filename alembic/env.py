@@ -12,6 +12,11 @@ from alembic import context
 
 from database.models.base import Base
 from database.models.accounts import *
+from database.models.movies import *
+from database.models.orders import *
+from database.models.payments import *
+from database.models.shopping_cart import *
+
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

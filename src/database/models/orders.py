@@ -1,12 +1,12 @@
 from datetime import datetime
-from enum import Enum
+from enum import Enum as PyEnum
 
-from sqlalchemy import Column, Integer, ForeignKey, DateTime, Enum, Numeric
+from sqlalchemy import Column, Integer, ForeignKey, DateTime, Enum as SaEnum, Numeric
 from sqlalchemy.orm import Mapped, relationship, mapped_column
 from database.models.base import Base
 
 
-class OrderStatusEnum(str, Enum):
+class OrderStatusEnum(str, PyEnum):
     pending = "pending"
     paid = "paid"
     canceled = "canceled"
@@ -18,7 +18,11 @@ class Order(Base):
     id = Column(Integer, primary_key=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
     created_at = Column(DateTime(timezone=True), nullable=False, default=datetime.utcnow)
-    status: Mapped[OrderStatusEnum] = mapped_column(Enum(OrderStatusEnum), nullable=False, default=OrderStatusEnum.pending)
+    status: Mapped[OrderStatusEnum] = mapped_column(
+        SaEnum(OrderStatusEnum, name="orderstatusenum"),
+        nullable=False,
+        default=OrderStatusEnum.pending
+    )
     total_amount = Column(Numeric(10, 2), nullable=True)
 
     user = relationship("User", back_populates="orders")
