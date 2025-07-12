@@ -10,14 +10,12 @@ class AppCoreSettings(BaseSettings):
     DB_PATH: str = str(ROOT_DIR / "database" / "source" / "app.db")
     CSV_MOVIES_PATH: str = str(ROOT_DIR / "database" / "seed_data" / "movies.csv")
 
-    # Email
     SMTP_SERVER: str = os.getenv("SMTP_SERVER", "localhost")
     SMTP_PORT: int = int(os.getenv("SMTP_PORT", 587))
     SMTP_USER: str = os.getenv("SMTP_USER", "noreply@example.com")
     SMTP_PASSWORD: str = os.getenv("SMTP_PASSWORD", "secret")
     SMTP_TLS: bool = os.getenv("SMTP_TLS", "true").lower() == "true"
 
-    # S3
     STORAGE_HOST: str = os.getenv("S3_HOST", "localhost")
     STORAGE_PORT: int = int(os.getenv("S3_PORT", 9000))
     STORAGE_USER: str = os.getenv("S3_USER", "admin")
@@ -40,6 +38,13 @@ class DevSettings(AppCoreSettings):
     DB_HOST: str = os.getenv("DB_HOST", "localhost")
     DB_PORT: int = int(os.getenv("DB_PORT", 5432))
     DB_NAME: str = os.getenv("DB_NAME", "app_db")
+
+    @property
+    def DATABASE_URL(self) -> str:
+        return (
+            f"postgresql+asyncpg://{self.DB_USER}:{self.DB_PASSWORD}"
+            f"@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"
+        )
 
 
 class TestSettings(AppCoreSettings):
