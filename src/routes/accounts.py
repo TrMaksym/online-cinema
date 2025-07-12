@@ -7,7 +7,7 @@ from datetime import datetime, timedelta
 from config.dependencies import get_email_sender
 from src.schemas.accounts import RegisterRequest, RegisterResponse
 from src.database.session_postgresql import get_async_session
-from src.security.passwords import get_password_hash
+from src.security.password import get_password_hash
 from src.database.models.accounts import User, ActivationToken
 from src.notifications.email import AsyncEmailService
 
