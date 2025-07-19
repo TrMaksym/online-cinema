@@ -3,16 +3,12 @@ from celery.schedules import crontab
 
 celery_app = Celery(
     "online_cinema",
-    broker="redis://localhost:6379/0",
-    backend="redis://localhost:6379/0",
-    include=["src.tasks.accounts"]
+    broker="redis://redis:6379/0",
+    backend="redis://redis:6379/0",
+    include=["src.tasks.accounts"],
 )
 
-celery_app.conf.task_modules = [
-    "src.tasks.accounts"
-]
-
-celery_app.conf.timezone = 'UTC'
+celery_app.conf.timezone = "UTC"
 
 celery_app.conf.beat_schedule = {
     "delete-expired-activation-tokens-daily": {
