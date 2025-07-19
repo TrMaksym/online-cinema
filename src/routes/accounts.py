@@ -5,6 +5,7 @@ from uuid import uuid4
 from datetime import datetime, timedelta
 
 from config.dependencies import get_email_sender
+from schemas.accounts import ResendActivationEmailRequest
 from src.schemas.accounts import RegisterRequest, RegisterResponse
 from src.database.session_postgresql import get_async_session
 from src.security.password import get_password_hash
@@ -53,6 +54,45 @@ async def register_user(
     activation_link = f"https://example.com/activate/{token}"
 
     await email_service.send_account_activation(data.email, activation_link)
+
+    return RegisterResponse(
+        email=data.email,
+        message="Registration successful. Please check your email to activate your account."
+    )
+
+
+@router.post("/reset-activation/")
+async def resend_activation(
+        data: ResendActivationEmailRequest,
+        db: AsyncSession = Depends(
+            get_async_session),
+        email: AsyncEmailService = Depends(get_email_sender)
+):
+    result = await db.execute(select(User).where(User.email == data.email))
+    user = result.scalars().first()
+
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User with this email does not exist."
+        )
+
+    if user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="User is already active."
+        )
+
+    activation_token = ActivationToken(
+        user_id=user.id,
+        token=str(uuid4()),
+        expires_at=datetime.utcnow() + timedelta(hours=24),
+    )
+    db.add(activation_token)
+    await db.commit()
+
+    activation_link = f"https://example.com/activate/{activation_token.token}"
+    await email.send_account_activation(recipient_email=data.email, activation_url=activation_link)
 
     return RegisterResponse(
         email=data.email,

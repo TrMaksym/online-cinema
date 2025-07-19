@@ -74,3 +74,7 @@ class RegisterRequest(BaseModel):
 class RegisterResponse(BaseModel):
     email: EmailStr
     message: str
+
+
+class ResendActivationEmailRequest(BaseModel):
+    email: EmailStr
