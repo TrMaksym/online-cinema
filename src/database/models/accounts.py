@@ -5,7 +5,7 @@ import enum
 from sqlalchemy import Column, Integer, String, Boolean, DateTime, ForeignKey, Text, Date, Enum
 from sqlalchemy.orm import relationship, Mapped, mapped_column
 
-from database.models.base import Base
+from .base import Base
 
 
 class UserGroupEnum(str, enum.Enum):
