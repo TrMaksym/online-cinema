@@ -78,3 +78,22 @@ class RegisterResponse(BaseModel):
 
 class ResendActivationEmailRequest(BaseModel):
     email: EmailStr
+
+
+class LoginRequest(BaseModel):
+    email: EmailStr
+    password: str
+
+
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
+
+class ResetPasswordRequest(BaseModel):
+    token: str
+    new_password: str
+
+
+class PasswordResetToken(BaseModel):
+    user_id: int
+    token: str
+    expires_at: datetime
