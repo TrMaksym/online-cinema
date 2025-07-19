@@ -2,12 +2,16 @@ import os
 
 from fastapi import Depends
 
-from config.settings import AppCoreSettings, DevSettings, TestSettings
-from notifications.email import AsyncEmailService
-from notifications.interfaces import EmailServiceProtocol
-from security.token_manager import JWTAuthManager
-from security.interfaces import JWTAuthManagerInterface
+from .settings import AppCoreSettings, DevSettings, TestSettings
+from src.notifications.email import AsyncEmailService
+from src.notifications.interfaces import EmailServiceProtocol
+from src.security.token_manager import JWTAuthManager
+from src.security.interfaces import JWTAuthManagerInterface
+from sqlalchemy.ext.asyncio import AsyncSession
 from storages import S3StorageClient, S3StorageInterface
+from typing import AsyncGenerator
+
+from src.database.session_postgresql import async_session_maker
 
 
 def get_settings() -> AppCoreSettings:
@@ -46,3 +50,8 @@ def get_s3_storage_client(
         secret_key=settings.STORAGE_PASSWORD,
         bucket_name=settings.STORAGE_BUCKET,
     )
+
+
+async def get_async_session() -> AsyncGenerator[AsyncSession, None]:
+    async with async_session_maker() as session:
+        yield session
