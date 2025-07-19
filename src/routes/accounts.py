@@ -15,6 +15,7 @@ from src.security.password import get_password_hash, verify_password
 from src.database.models.accounts import User, ActivationToken, RefreshToken, UserGroupEnum, UserGroup
 from src.notifications.email import AsyncEmailService
 from src.tasks.accounts import send_reset_email_async
+from src.validation.accounts import validate_password_complexity
 
 router = APIRouter()
 
@@ -33,6 +34,12 @@ async def register_user(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="User with this email already exists."
+        )
+
+    if not validate_password_complexity(data.password):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Password must be at least 8 characters long and contain at least one number and one letter."
         )
 
     hashed_password = get_password_hash(data.password)
@@ -211,8 +218,10 @@ async def reset_password(token: str, new_password: str, db: AsyncSession = Depen
 
     user = await db.get(User, reset_token.user_id)
 
-    if len(new_password) < 8 or new_password.isalpha():
-        raise HTTPException(status_code=400, detail="Password too weak")
+    if not validate_password_complexity(new_password):
+        raise HTTPException(status_code=400,
+            detail="Password must be at least 8 characters long and include an uppercase letter, number, and special character."
+        )
 
     user.hashed_password = get_password_hash(new_password)
 
@@ -234,6 +243,11 @@ async def change_password(
 
     if not verify_password(data.current_password, user.hashed_password):
         raise HTTPException(status_code=400, detail="Current password is incorrect")
+
+    if not validate_password_complexity(data.new_password):
+        raise HTTPException(status_code=400,
+            detail="Password must be at least 8 characters long and include an uppercase letter, number, and special character."
+        )
 
     user.hashed_password = get_password_hash(data.new_password)
     await db.commit()
@@ -270,3 +284,4 @@ async def activate_user_admin(
     user.is_active = True
     await db.commit()
     return {"message": "User activated successfully"}
+
