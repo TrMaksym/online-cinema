@@ -97,3 +97,8 @@ class PasswordResetToken(BaseModel):
     user_id: int
     token: str
     expires_at: datetime
+
+class ChangePasswordRequest(BaseModel):
+    email: str
+    current_password: str
+    new_password: str

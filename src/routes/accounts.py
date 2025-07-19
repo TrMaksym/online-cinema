@@ -7,7 +7,7 @@ from uuid import uuid4
 from datetime import datetime, timedelta
 
 from src.config.dependencies import get_email_sender
-from src.schemas.accounts import ResendActivationEmailRequest
+from src.schemas.accounts import ResendActivationEmailRequest, ChangePasswordRequest
 from src.schemas.accounts import RegisterRequest, RegisterResponse, LoginRequest, ForgotPasswordRequest, PasswordResetToken
 from src.database.session_postgresql import get_async_session
 from src.security.jwt import create_refresh_token, create_access_token
@@ -183,3 +183,90 @@ async def change_user_group(
     user.group_id = group.id
     await db.commit()
     return {"message": "Group updated"}
+
+@router.get("/activate/{token}")
+async def activate_user(token: str, db: AsyncSession = Depends(get_async_session)):
+    result = await db.execute(select(ActivationToken).where(ActivationToken.token == token))
+    activation_token = result.scalars().first()
+
+    if not activation_token or activation_token.expires_at < datetime.utcnow():
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid activation token or expired")
+
+    user = await db.get(User, activation_token.user_id)
+    if user.is_active:
+        return {"message": "Account already activated"}
+
+    user.is_active = True
+    await db.delete(activation_token)
+    await db.commit()
+    return {"message": "Account activated successfully"}
+
+@router.put("/reset-password/{token}")
+async def reset_password(token: str, new_password: str, db: AsyncSession = Depends(get_async_session)):
+    result = await db.execute(select(PasswordResetToken).where(PasswordResetToken.token == token))
+    reset_token = result.scalars().first()
+
+    if not reset_token or reset_token.expires_at < datetime.utcnow():
+        raise HTTPException(status_code=400, detail="Invalid or expired password reset token")
+
+    user = await db.get(User, reset_token.user_id)
+
+    if len(new_password) < 8 or new_password.isalpha():
+        raise HTTPException(status_code=400, detail="Password too weak")
+
+    user.hashed_password = get_password_hash(new_password)
+
+    await db.delete(reset_token)
+    await db.commit()
+
+    return {"message": "Password successfully reset"}
+
+@router.put("/change-password/")
+async def change_password(
+    data: ChangePasswordRequest,
+    db: AsyncSession = Depends(get_async_session)
+):
+    result = await db.execute(select(User).where(User.email == data.email))
+    user = result.scalars().first()
+
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    if not verify_password(data.current_password, user.hashed_password):
+        raise HTTPException(status_code=400, detail="Current password is incorrect")
+
+    user.hashed_password = get_password_hash(data.new_password)
+    await db.commit()
+
+    return {"message": "Password changed successfully"}
+
+@router.post("/refresh-token/")
+async def refresh_access_token(
+        refresh_token: str,
+        db: AsyncSession = Depends(get_async_session)
+):
+    result = await db.execute(select(RefreshToken).where(RefreshToken.token == refresh_token))
+    token_record = result.scalars().first()
+
+    if not token_record or token_record.expires_at < datetime.utcnow():
+        raise HTTPException(status_code=401, detail="Invalid or expired refresh token")
+
+    access_token = create_access_token(token_record.user_id)
+    return {"access_token": access_token}
+
+
+@router.put("/admin/activate-user/{user_id}")
+async def activate_user_admin(
+        user_id: int,
+        db: AsyncSession = Depends(get_async_session)
+):
+    user = await db.get(User, user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User no found")
+
+    if user.is_active:
+        return {"message": "User already active"}
+
+    user.is_active = True
+    await db.commit()
+    return {"message": "User activated successfully"}
