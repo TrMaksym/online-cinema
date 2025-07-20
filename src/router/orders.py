@@ -5,8 +5,8 @@ from datetime import datetime
 from typing import List
 
 from src.database.models import Order, OrderItem, Movie
-from schemas import OrderCreateRequest, OrderResponse
-from config.dependencies import get_async_session, get_current_user
+from src.schemas import OrderCreateRequest, OrderResponse
+from src.config.dependencies import get_async_session, get_current_user
 
 router = APIRouter(prefix="/orders", tags=["orders"])
 
