@@ -6,7 +6,7 @@ import uuid
 
 from sqlalchemy.testing.schema import mapped_column
 
-from database.models.base import Base
+from .base import Base
 
 movie_genres = Table(
     "movie_genres",

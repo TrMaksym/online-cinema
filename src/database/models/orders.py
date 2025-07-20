@@ -3,7 +3,7 @@ from enum import Enum as PyEnum
 
 from sqlalchemy import Column, Integer, ForeignKey, DateTime, Enum as SaEnum, Numeric
 from sqlalchemy.orm import Mapped, relationship, mapped_column
-from database.models.base import Base
+from .base import Base
 
 
 class OrderStatusEnum(str, PyEnum):

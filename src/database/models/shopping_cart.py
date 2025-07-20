@@ -3,7 +3,7 @@ from datetime import datetime
 from sqlalchemy import Column, Integer, ForeignKey, DateTime
 from sqlalchemy.orm import relationship
 
-from database.models.base import Base
+from .base import Base
 
 
 class Cart(Base):

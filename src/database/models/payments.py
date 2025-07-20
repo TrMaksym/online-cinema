@@ -3,7 +3,7 @@ from sqlalchemy.orm import relationship, Mapped, mapped_column
 from datetime import datetime
 from enum import Enum as PyEnum
 
-from database.models.base import Base
+from .base import Base
 
 class PaymentStatusEnum(str, PyEnum):
     successful = "successful"
