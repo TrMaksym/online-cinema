@@ -101,3 +101,48 @@ class RatingCreateSchema(BaseModel):
     rating: conint(ge=1, le=10)
     user_id: int
     movie_id: int
+
+
+class LikeDislikeCreateSchema(BaseModel):
+    user_id: int
+    movie_id: int
+    like: bool
+
+class LikeDislikeResponseSchema(BaseModel):
+    movie_id: int
+    user_id: int
+    like: bool
+
+    class Config:
+        orm_mode = True
+
+class CommentCreateSchema(BaseModel):
+    user_id: int
+    movie_id: int
+    parent_comment_id: Optional[int] = None
+    text: constr(min_length=1)
+
+class CommentResponseSchema(BaseModel):
+    id: int
+    user_id: int
+    movie_id: int
+    parent_comment_id: Optional[int]
+    text: str
+    replies: Optional[List['CommentResponseSchema']] = []
+
+    class Config:
+        orm_mode = True
+
+CommentResponseSchema.update_forward_refs()
+
+class FavoriteCreateSchema(BaseModel):
+    user_id: int
+    movie_id: int
+
+class FavoriteResponseSchema(BaseModel):
+    id: int
+    user_id: int
+    movie_id: int
+
+    class Config:
+        orm_mode = True
