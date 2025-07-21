@@ -1,4 +1,6 @@
 from typing import Optional, List
+
+from pydantic import conint
 from pydantic.v1 import BaseModel, constr, condecimal
 import uuid
 
@@ -16,6 +18,24 @@ class MovieSchema(BaseModel):
     description: constr(max_length=255)
     price: condecimal(max_digits=10, decimal_places=2)
     certification_id: int
+
+    class Config:
+        orm_mode = True
+
+class MovieCreateSchema(BaseModel):
+    name: constr(max_length=250)
+    year: int
+    time: int
+    imdb: float
+    votes: int
+    meta_score: Optional[float]
+    gross: Optional[float]
+    description: constr(max_length=255)
+    price: condecimal(max_digits=10, decimal_places=2)
+    certification_id: int
+    genres: Optional[List[int]] = []
+    directors: Optional[List[int]] = []
+    stars: Optional[List[int]] = []
 
     class Config:
         orm_mode = True
@@ -75,3 +95,9 @@ class Director(BaseModel):
 
     class Config:
         orm_mode = True
+
+
+class RatingCreateSchema(BaseModel):
+    rating: conint(ge=1, le=10)
+    user_id: int
+    movie_id: int

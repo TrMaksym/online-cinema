@@ -1,6 +1,7 @@
 from typing import Optional
 
-from sqlalchemy import Column, Integer, String, UUID, Float, DECIMAL, ForeignKey, Table
+from sqlalchemy import Column, Integer, String, UUID, Float, DECIMAL, ForeignKey, Table, Text, DateTime, func, \
+    UniqueConstraint
 from sqlalchemy.orm import relationship, Mapped
 import uuid
 
@@ -82,3 +83,34 @@ class Movie(Base):
     genres = relationship("Genre", secondary=movie_genres, backref="movies")
     directors = relationship("Director", secondary=movie_directors, backref="movies")
     stars = relationship("Star", secondary=movie_stars, backref="movies")
+
+
+class MovieRating(Base):
+    __tablename__ = "movie_ratings"
+    id = Column(Integer, primary_key=True, index=True)
+    movie_id = Column(Integer, ForeignKey("movies.id", ondelete="CASCADE"), nullable=False)
+    user_id = Column(Integer, nullable=False)
+    rating = Column(Integer, nullable=False)
+
+    __table_args__ = (UniqueConstraint('movie_id', 'user_id', name='_user_movie_rating_uc'),)
+
+class MovieLikeDislike(Base):
+    __tablename__ = "movie_likes_dislikes"
+    id = Column(Integer, primary_key=True, index=True)
+    movie_id = Column(Integer, ForeignKey("movies.id", ondelete="CASCADE"), nullable=False)
+    user_id = Column(Integer, nullable=False)
+    is_like = Column(Integer, nullable=False)
+
+    __table_args__ = (UniqueConstraint('movie_id', 'user_id', name='_user_movie_like_uc'),)
+
+class MovieComment(Base):
+    __tablename__ = "movie_comments"
+    id = Column(Integer, primary_key=True, index=True)
+    movie_id = Column(Integer, ForeignKey("movies.id", ondelete="CASCADE"), nullable=False)
+    user_id = Column(Integer, nullable=False)
+    parent_id = Column(Integer, ForeignKey("movie_comments.id", ondelete="CASCADE"), nullable=True)
+    content = Column(Text, nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+    replies = relationship("MovieComment", backref="parent", remote_side=[id])
