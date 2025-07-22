@@ -4,41 +4,44 @@ from sqlalchemy.future import select
 from datetime import datetime
 from typing import List
 
-from src.database.models import Order, OrderItem, Movie
-from src.schemas import OrderCreateRequest, OrderResponse
+from src.database.models.orders import Order, OrderItem
+from src.database.models.movies import Movie
+from src.database.models.shopping_cart import Cart
+from src.schemas.orders import OrderCreateRequest, OrderResponse
 from src.config.dependencies import get_async_session, get_current_user
 
-router = APIRouter(prefix="/orders", tags=["orders"])
+router = APIRouter()
 
-@router.post("/", response_model=OrderResponse, status_code=status.HTTP_201_CREATED)
-async def create_order(
-    order_data: OrderCreateRequest,
+@router.post("/from-cart", response_model=OrderResponse, status_code=status.HTTP_201_CREATED)
+async def create_order_from_cart(
     db: AsyncSession = Depends(get_async_session),
     current_user=Depends(get_current_user)
 ):
-
-    movies_ids = order_data.movie_ids
-    query = select(OrderItem).join(Order).where(
-        Order.user_id == current_user.id,
-        OrderItem.movie_id.in_(movies_ids)
+    cart_result = await db.execute(
+        select(Cart).where(Cart.user_id == current_user.id)
     )
-    existing_items = (await db.execute(query)).scalars().all()
-    if existing_items:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Some movies are already purchased."
-        )
+    cart = cart_result.scalar_one_or_none()
+    if not cart or not cart.items:
+        raise HTTPException(status_code=400, detail="Cart is empty")
 
-    query_movies = select(Movie).where(Movie.id.in_(movies_ids))
-    movies = (await db.execute(query_movies)).scalars().all()
-    if len(movies) != len(movies_ids):
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="One or more movies not found."
+    movie_ids = [item.movie_id for item in cart.items]
+
+    purchased_result = await db.execute(
+        select(OrderItem.movie_id).join(Order).where(
+            Order.user_id == current_user.id,
+            OrderItem.movie_id.in_(movie_ids)
         )
+    )
+    already_purchased = {row[0] for row in purchased_result.all()}
+    available_ids = [mid for mid in movie_ids if mid not in already_purchased]
+
+    if not available_ids:
+        raise HTTPException(status_code=400, detail="All movies already purchased")
+
+    movies_result = await db.execute(select(Movie).where(Movie.id.in_(available_ids)))
+    movies = movies_result.scalars().all()
 
     total_price = sum(movie.price for movie in movies)
-
     new_order = Order(
         user_id=current_user.id,
         created_at=datetime.utcnow(),
@@ -49,11 +52,10 @@ async def create_order(
     await db.flush()
 
     for movie in movies:
-        order_item = OrderItem(
-            order_id=new_order.id,
-            movie_id=movie.id
-        )
-        db.add(order_item)
+        db.add(OrderItem(order_id=new_order.id, movie_id=movie.id))
+
+    for item in cart.items:
+        db.delete(item)
 
     await db.commit()
 
@@ -64,31 +66,3 @@ async def create_order(
         status=new_order.status,
         movies=[{"id": m.id, "name": m.name, "price": m.price} for m in movies]
     )
-
-
-@router.get("/", response_model=List[OrderResponse])
-async def get_orders(
-    db: AsyncSession = Depends(get_async_session),
-    current_user=Depends(get_current_user)
-):
-    query = select(Order).where(Order.user_id == current_user.id).order_by(Order.created_at.desc())
-    orders = (await db.execute(query)).scalars().all()
-
-    orders_responses = []
-    for order in orders:
-        query_items = select(OrderItem).where(OrderItem.order_id == order.id)
-        items = (await db.execute(query_items)).scalars().all()
-        movie_ids = [item.movie_id for item in items]
-
-        query_movies = select(Movie).where(Movie.id.in_(movie_ids))
-        movies = (await db.execute(query_movies)).scalars().all()
-
-        orders_responses.append(OrderResponse(
-            id=order.id,
-            created_at=order.created_at,
-            total_price=order.total_price,
-            status=order.status,
-            movies=[{"id": m.id, "name": m.name, "price": m.price} for m in movies]
-        ))
-
-    return orders_responses
