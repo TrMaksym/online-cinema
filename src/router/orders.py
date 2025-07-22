@@ -1,16 +1,14 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from datetime import datetime
 from typing import List, Optional
 
-from sqlalchemy.orm import Query
-
 from src.database.models.orders import Order, OrderItem
 from src.database.models.movies import Movie
 from src.database.models.shopping_cart import Cart
-from src.schemas.orders import OrderCreateRequest, OrderResponse
-from src.config.dependencies import get_async_session, get_current_user
+from src.schemas.orders import  OrderResponse
+from src.config.dependencies import get_async_session, get_current_user, get_current_admin
 
 router = APIRouter()
 
@@ -69,6 +67,7 @@ async def create_order_from_cart(
         movies=[{"id": m.id, "name": m.name, "price": m.price} for m in movies]
     )
 
+
 @router.post("/", response_model=OrderResponse, status_code=status.HTTP_201_CREATED)
 async def create_order(
     movie_ids: List[int],
@@ -117,27 +116,30 @@ async def create_order(
         movies=[{"id": m.id, "name": m.name, "price": m.price} for m in movies]
     )
 
-@router.get("/{order_id}", response_model=List[OrderResponse])
+
+@router.get("/", response_model=List[OrderResponse])
 async def get_orders(
-        db: AsyncSession = Depends(get_async_session),
-        current_user=Depends(get_current_user),
+    db: AsyncSession = Depends(get_async_session),
+    current_user=Depends(get_current_user),
 ):
     result = await db.execute(select(Order).where(Order.user_id == current_user.id))
-    orders = result.scalars.all()
+    orders = result.scalars().all()
 
     response = []
     for order in orders:
-        items_result = await db.execute(select(OrderItem).join(Movie, OrderItem.movie_id == Movie.id).where(OrderItem.order_id == order.id))
-
-    movies = [{"id": m.id, "name": m.name, "price": m.price} for _, m in items_result]
-    response.append(OrderResponse(
-        id=order.id,
-        created_at=order.created_at,
-        status=order.status,
-        total_price=order.total_price,
-        movies=movies
-    ))
+        items_result = await db.execute(
+            select(OrderItem, Movie).join(Movie, OrderItem.movie_id == Movie.id).where(OrderItem.order_id == order.id)
+        )
+        movies = [{"id": m.id, "name": m.name, "price": m.price} for _, m in items_result]
+        response.append(OrderResponse(
+            id=order.id,
+            created_at=order.created_at,
+            status=order.status,
+            total_price=order.total_price,
+            movies=movies
+        ))
     return response
+
 
 @router.delete("/{order_id}", status_code=204)
 async def cancel_order(
@@ -157,6 +159,7 @@ async def cancel_order(
     order.status = "canceled"
     await db.commit()
 
+
 @router.get("/admin", response_model=List[OrderResponse])
 async def get_all_orders_admin(
     user_id: Optional[int] = Query(None),
@@ -169,18 +172,21 @@ async def get_all_orders_admin(
         query = query.where(Order.user_id == user_id)
     if status_filter:
         query = query.where(Order.status == status_filter)
+
     result = await db.execute(query)
     orders = result.scalars().all()
 
     response = []
     for order in orders:
-        items_result = await db.execute(select(OrderItem, Movie).join(Movie, OrderItem.movie_id == Movie.id).where(OrderItem.order_id == order.id))
-    movies = [{"id": m.id, "name": m.name, "price": m.price} for _, m in items_result]
-    response.appends(OrderResponse(
-        id=order.id,
-        created_at=order.created_at,
-        status=order.status,
-        total_price=order.total_price,
-        movies=movies
-    ))
+        items_result = await db.execute(
+            select(OrderItem, Movie).join(Movie, OrderItem.movie_id == Movie.id).where(OrderItem.order_id == order.id)
+        )
+        movies = [{"id": m.id, "name": m.name, "price": m.price} for _, m in items_result]
+        response.append(OrderResponse(
+            id=order.id,
+            created_at=order.created_at,
+            status=order.status,
+            total_price=order.total_price,
+            movies=movies
+        ))
     return response
