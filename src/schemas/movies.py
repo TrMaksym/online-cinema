@@ -122,18 +122,17 @@ class CommentCreateSchema(BaseModel):
     parent_comment_id: Optional[int] = None
     text: constr(min_length=1)
 
-class CommentResponseSchema(BaseModel):
+class CommentSchema(BaseModel):
     id: int
     user_id: int
     movie_id: int
     parent_comment_id: Optional[int]
     text: str
-    replies: Optional[List['CommentResponseSchema']] = []
+    replies: Optional[List['CommentSchema']] = []
 
     class Config:
         orm_mode = True
 
-CommentResponseSchema.update_forward_refs()
 
 class FavoriteCreateSchema(BaseModel):
     user_id: int
