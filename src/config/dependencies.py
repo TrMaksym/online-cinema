@@ -4,7 +4,7 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy import select
 
-from database.models.accounts import User
+from database.models.accounts import User, UserGroupEnum
 from .settings import AppCoreSettings, DevSettings, TestSettings
 from src.notifications.email import AsyncEmailService
 from src.notifications.interfaces import EmailServiceProtocol
@@ -79,3 +79,20 @@ async def get_current_user(
             status_code=status.HTTP_401_UNAUTHORIZED,
         )
     return user
+
+
+def get_current_admin(current_user: User = Depends(get_current_user)) -> User:
+    if current_user.group.name != UserGroupEnum.ADMIN:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin access required",
+        )
+    return current_user
+
+def get_current_moderator(current_user: User = Depends(get_current_user)) -> User:
+    if current_user.group.name not in [UserGroupEnum.MODERATOR, UserGroupEnum.ADMIN]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Moderator or admin access required",
+        )
+    return current_user

@@ -2,7 +2,9 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from datetime import datetime
-from typing import List
+from typing import List, Optional
+
+from sqlalchemy.orm import Query
 
 from src.database.models.orders import Order, OrderItem
 from src.database.models.movies import Movie
@@ -66,3 +68,119 @@ async def create_order_from_cart(
         status=new_order.status,
         movies=[{"id": m.id, "name": m.name, "price": m.price} for m in movies]
     )
+
+@router.post("/", response_model=OrderResponse, status_code=status.HTTP_201_CREATED)
+async def create_order(
+    movie_ids: List[int],
+    db: AsyncSession = Depends(get_async_session),
+    current_user=Depends(get_current_user)
+):
+    if not movie_ids:
+        raise HTTPException(status_code=400, detail="No movies selected.")
+
+    purchased_result = await db.execute(
+        select(OrderItem.movie_id).join(Order).where(Order.user_id == current_user.id)
+    )
+    already_purchased = {r[0] for r in purchased_result.all()}
+    filtered_ids = [mid for mid in movie_ids if mid not in already_purchased]
+    if not filtered_ids:
+        raise HTTPException(status_code=400, detail="All movies already purchased.")
+
+    movies_result = await db.execute(select(Movie).where(Movie.id.in_(filtered_ids)))
+    movies = movies_result.scalars().all()
+    if not movies:
+        raise HTTPException(status_code=404, detail="No available movies found.")
+
+    total_price = sum(m.price for m in movies)
+    new_order = Order(
+        user_id=current_user.id,
+        created_at=datetime.utcnow(),
+        total_price=total_price,
+        status="pending"
+    )
+    db.add(new_order)
+    await db.flush()
+
+    for movie in movies:
+        db.add(OrderItem(
+            order_id=new_order.id,
+            movie_id=movie.id,
+            price_at_order=movie.price
+        ))
+
+    await db.commit()
+    return OrderResponse(
+        id=new_order.id,
+        created_at=new_order.created_at,
+        status=new_order.status,
+        total_price=new_order.total_price,
+        movies=[{"id": m.id, "name": m.name, "price": m.price} for m in movies]
+    )
+
+@router.get("/{order_id}", response_model=List[OrderResponse])
+async def get_orders(
+        db: AsyncSession = Depends(get_async_session),
+        current_user=Depends(get_current_user),
+):
+    result = await db.execute(select(Order).where(Order.user_id == current_user.id))
+    orders = result.scalars.all()
+
+    response = []
+    for order in orders:
+        items_result = await db.execute(select(OrderItem).join(Movie, OrderItem.movie_id == Movie.id).where(OrderItem.order_id == order.id))
+
+    movies = [{"id": m.id, "name": m.name, "price": m.price} for _, m in items_result]
+    response.append(OrderResponse(
+        id=order.id,
+        created_at=order.created_at,
+        status=order.status,
+        total_price=order.total_price,
+        movies=movies
+    ))
+    return response
+
+@router.delete("/{order_id}", status_code=204)
+async def cancel_order(
+    order_id: int,
+    db: AsyncSession = Depends(get_async_session),
+    current_user=Depends(get_current_user)
+):
+    result = await db.execute(
+        select(Order).where(Order.id == order_id, Order.user_id == current_user.id)
+    )
+    order = result.scalar_one_or_none()
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+    if order.status != "pending":
+        raise HTTPException(status_code=400, detail="Cannot cancel paid/canceled order")
+
+    order.status = "canceled"
+    await db.commit()
+
+@router.get("/admin", response_model=List[OrderResponse])
+async def get_all_orders_admin(
+    user_id: Optional[int] = Query(None),
+    status_filter: Optional[str] = Query(None),
+    db: AsyncSession = Depends(get_async_session),
+    _: dict = Depends(get_current_admin)
+):
+    query = select(Order)
+    if user_id:
+        query = query.where(Order.user_id == user_id)
+    if status_filter:
+        query = query.where(Order.status == status_filter)
+    result = await db.execute(query)
+    orders = result.scalars().all()
+
+    response = []
+    for order in orders:
+        items_result = await db.execute(select(OrderItem, Movie).join(Movie, OrderItem.movie_id == Movie.id).where(OrderItem.order_id == order.id))
+    movies = [{"id": m.id, "name": m.name, "price": m.price} for _, m in items_result]
+    response.appends(OrderResponse(
+        id=order.id,
+        created_at=order.created_at,
+        status=order.status,
+        total_price=order.total_price,
+        movies=movies
+    ))
+    return response
