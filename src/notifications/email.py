@@ -4,7 +4,7 @@ from email.mime.multipart import MIMEMultipart
 
 import aiosmtplib
 
-from exceptions import EmailDeliveryError
+from src.exceptions import EmailDeliveryError
 from notifications.interfaces import EmailServiceProtocol
 
 class AsyncEmailService(EmailServiceProtocol):

@@ -2,7 +2,7 @@ import os
 from pathlib import Path
 from typing import Any
 
-from pydantic_settings import BaseSettings
+from pydantic import BaseSettings
 
 
 class AppCoreSettings(BaseSettings):

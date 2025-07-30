@@ -1,37 +1,96 @@
-version: "3.9"
-
 services:
-  web:
-    build: .
-    container_name: online_cinema_web
+  db:
+    image: postgres:15
+    container_name: postgres_theater
+    env_file:
+      - .env
     ports:
-      - "8000:8000"
+      - "5432:5432"
     volumes:
-      - .:/app
-    depends_on:
-      - redis
-    command: uvicorn src.main:app --host 0.0.0.0 --port 8000
+      - postgres_theater_data:/var/lib/postgresql/data/
+    networks:
+      - theater_network
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U $POSTGRES_USER -d $POSTGRES_DB -h 127.0.0.1 || exit 1" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
 
-  celery:
-    build: .
-    container_name: online_cinema_celery
-    command: celery -A src.celery_app worker --loglevel=info
-    volumes:
-      - .:/app
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: pgadmin_theater
+    ports:
+      - "3333:80"
+    env_file:
+      - .env
     depends_on:
-      - redis
-
-  beat:
-    build: .
-    container_name: online_cinema_beat
-    command: celery -A src.celery_app beat --loglevel=info
+      db:
+        condition: service_healthy
     volumes:
-      - .:/app
-    depends_on:
-      - redis
+      - pgadmin_theater_data:/var/lib/pgadmin
+    networks:
+      - theater_network
 
   redis:
     image: redis:7
     container_name: online_cinema_redis
     ports:
       - "6379:6379"
+    networks:
+      - theater_network
+
+  web:
+    build: .
+    container_name: online_cinema_web
+    command: uvicorn src.main:app --host 0.0.0.0 --port 8000
+    env_file:
+      - .env
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/app
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    networks:
+      - theater_network
+
+  celery:
+    build: .
+    container_name: online_cinema_celery
+    command: celery -A src.celery_app worker --loglevel=info
+    env_file:
+      - .env
+    volumes:
+      - .:/app
+    depends_on:
+      - redis
+    networks:
+      - theater_network
+
+  beat:
+    build: .
+    container_name: online_cinema_beat
+    command: celery -A src.celery_app beat --loglevel=info
+    env_file:
+      - .env
+    volumes:
+      - .:/app
+    depends_on:
+      - redis
+    networks:
+      - theater_network
+
+volumes:
+  postgres_theater_data:
+    driver: local
+  pgadmin_theater_data:
+    driver: local
+
+
+networks:
+  theater_network:
+    driver: bridge
