@@ -2,16 +2,16 @@ import os
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
+from jose import JWTError
 from sqlalchemy import select
 
 from database.models.accounts import User, UserGroupEnum
 from .settings import AppCoreSettings, DevSettings, TestSettings
 from src.notifications.email import AsyncEmailService
 from src.notifications.interfaces import EmailServiceProtocol
-from src.security.token_manager import JWTAuthManager
+from src.security.jwt import JWTAuthManager
 from src.security.interfaces import JWTAuthManagerInterface
 from sqlalchemy.ext.asyncio import AsyncSession
-from storages import S3StorageClient, S3StorageInterface
 from typing import AsyncGenerator
 
 from src.database.session_postgresql import async_session_maker
@@ -62,22 +62,23 @@ async def get_async_session() -> AsyncGenerator[AsyncSession, None]:
         yield session
 
 async def get_current_user(
-        token: str = Depends(oauth2_scheme),
-        db: AsyncSession = Depends(get_async_session),
+    token: str = Depends(oauth2_scheme),
+    db: AsyncSession = Depends(get_async_session),
+    jwt_auth: JWTAuthManagerInterface = Depends(get_jwt_auth_manager),
 ):
-    if not token.isdigit():
+    try:
+        payload = jwt_auth.decode_access_token(token)
+        user_id = int(payload.get("sub"))
+    except (JWTError, ValueError):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid token",
+            detail="Invalid or expired token",
         )
-    user_id = int(token)
     query = select(User).where(User.id == user_id)
     result = await db.execute(query)
     user = result.scalars().first()
     if not user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-        )
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
     return user
 
 
