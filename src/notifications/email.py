@@ -45,6 +45,9 @@ class AsyncEmailService(EmailServiceProtocol):
             logging.exception("Failed to send email")
             raise EmailDeliveryError(f"Failed to send email to {recipient}: {e}")
 
+    async def send_email(self, recipient: str, subject: str, body_text: str) -> None:
+        await self._send(recipient, subject, body_text)
+
     async def send_account_activation(self, recipient_email: str, activation_url: str) -> None:
         subject = "Account Activation"
         body = (

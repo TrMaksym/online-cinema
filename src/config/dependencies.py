@@ -81,18 +81,10 @@ async def get_current_user(
     return user
 
 
-def get_current_admin(current_user: User = Depends(get_current_user)) -> User:
-    if current_user.group.name != UserGroupEnum.ADMIN:
+async def get_current_admin_or_moderator(current_user: User = Depends(get_current_user)):
+    if current_user.role not in ("admin", "moderator"):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Admin access required",
-        )
-    return current_user
-
-def get_current_moderator(current_user: User = Depends(get_current_user)) -> User:
-    if current_user.group.name not in [UserGroupEnum.MODERATOR, UserGroupEnum.ADMIN]:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Moderator or admin access required",
+            detail="Insufficient permissions"
         )
     return current_user

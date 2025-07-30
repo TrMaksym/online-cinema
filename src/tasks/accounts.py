@@ -1,7 +1,6 @@
 import asyncio
 from datetime import datetime
 
-from aiobotocore.session import get_session
 from sqlalchemy import delete
 
 
@@ -10,7 +9,7 @@ from src.database.session_postgresql import async_session_maker
 from src.celery_app import celery_app
 from celery import shared_task
 from src.notifications.email import AsyncEmailService
-from src.schemas.accounts import PasswordResetToken
+from src.database.models.accounts import UserResetPassword
 
 
 @celery_app.task
@@ -37,7 +36,7 @@ async def delete_expired_tokens():
             delete(ActivationToken).where(ActivationToken.expires_at < now)
         )
         await session.execute(
-            delete(PasswordResetToken).where(PasswordResetToken.expires_at < now)
+            delete(UserResetPassword).where(UserResetPassword.expires_at < now)
         )
         await session.execute(
             delete(RefreshToken).where(RefreshToken.expires_at < now)

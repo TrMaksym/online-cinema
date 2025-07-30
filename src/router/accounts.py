@@ -12,7 +12,8 @@ from src.schemas.accounts import RegisterRequest, RegisterResponse, LoginRequest
 from src.database.session_postgresql import get_async_session
 from src.security.jwt import create_refresh_token, create_access_token
 from src.security.password import get_password_hash, verify_password
-from src.database.models.accounts import User, ActivationToken, RefreshToken, UserGroupEnum, UserGroup
+from src.database.models.accounts import User, ActivationToken, RefreshToken, UserGroupEnum, UserGroup, \
+    UserResetPassword
 from src.notifications.email import AsyncEmailService
 from src.tasks.accounts import send_reset_email_async
 from src.validation.accounts import validate_password_complexity
@@ -165,7 +166,7 @@ async def forgot_password(data: ForgotPasswordRequest, db: AsyncSession = Depend
 
     token = str(uuid4())
     expires = datetime.utcnow() + timedelta(hours=2)
-    db.add(PasswordResetToken(user_id=user.id, token=token, expires_at=expires))
+    db.add(UserResetPassword(user_id=user.id, token=token, expires_at=expires))
     await db.commit()
 
     reset_link = f"{BASE_URL}/reset-password/{token}"
