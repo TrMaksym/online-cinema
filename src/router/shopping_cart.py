@@ -1,4 +1,4 @@
-from typing import List
+
 
 from fastapi import APIRouter, HTTPException
 from fastapi.params import Depends
@@ -17,7 +17,7 @@ router = APIRouter()
 async def add_to_cart(
         movie_id: int,
         db: AsyncSession = Depends(get_async_session),
-                                   current_user = Depends(get_current_user)
+        current_user = Depends(get_current_user)
 ):
     purchased_result = await db.execute(
         select(OrderItem.movie_id).join(Order).where(
@@ -28,7 +28,7 @@ async def add_to_cart(
     if purchased_result.scalar_one_or_none():
         raise HTTPException(status_code=400, detail="Movie already purchased")
 
-    result = await db.esecute(select(Cart).where(Cart.user_id == current_user.id))
+    result = await db.execute(select(Cart).where(Cart.user_id == current_user.id))
     cart = result.scalar_one_or_none()
     if not cart:
         cart = Cart(user_id=current_user.id)
@@ -50,20 +50,19 @@ async def remove_from_cart(
         db: AsyncSession = Depends(get_async_session),
         current_user = Depends(get_current_user)
 ):
-        result = await db.execute(select(CartItem).join(Cart).where(
+    result = await db.execute(select(CartItem).join(Cart).where(
         Cart.user_id == current_user.id,
         CartItem.movie_id == movie_id
-            )
-         )
-        item = result.scalar_one_or_none()
-        if not item:
-            raise HTTPException(status_code=400, detail="Movie not in cart")
+    ))
+    item = result.scalar_one_or_none()
+    if not item:
+        raise HTTPException(status_code=400, detail="Movie not in cart")
 
-        await db.delete(item)
-        await db.commit()
-        return {"message": "Movie removed from cart"}
+    await db.delete(item)
+    await db.commit()
+    return {"message": "Movie removed from cart"}
 
-@router.get("/", response_model=List(MovieSchema))
+@router.get("/", response_model=list[MovieSchema])
 async def get_cart(
         db: AsyncSession = Depends(get_async_session),
         current_user = Depends(get_current_user)

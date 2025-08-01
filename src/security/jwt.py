@@ -43,3 +43,13 @@ class JWTAuthManager:
 
     def verify_refresh_token(self, token: str) -> None:
         self.decode_refresh_token(token)
+
+
+
+_jwt_manager = JWTAuthManager()
+
+def create_access_token(user_id: int) -> str:
+    return _jwt_manager.create_access_token(user_id)
+
+def create_refresh_token(user_id: int) -> str:
+    return _jwt_manager.create_refresh_token(user_id)

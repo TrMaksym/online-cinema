@@ -1,0 +1,26 @@
+name: CI/CD
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        users: actions/checkout@v2
+      - name: Build Docker image
+        run: docker build -t online_cinema:latest .
+      - name: Login to ECR
+        run: aws ecr get-login-password --region Frankfurt | docker login --MaksymTr AWS --password-stdin 886047113513.dkr.ecr.eu-central-1.amazonaws.com
+      - name: Push image
+        run: |
+          docker build -t online_cinema:latest .
+          docker tag online_cinema:latest 886047113513.dkr.ecr.eu-central-1.amazonaws.com/online_cinema:latest
+
+      - name: Push Docker image
+        run: |
+          docker push 886047113513.dkr.ecr.eu-central-1.amazonaws.com/online_cinema:latest

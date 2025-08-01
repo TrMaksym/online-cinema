@@ -8,7 +8,7 @@ from src.database.models.orders import Order, OrderItem
 from src.database.models.movies import Movie
 from src.database.models.shopping_cart import Cart
 from src.schemas.orders import  OrderResponse
-from src.config.dependencies import get_async_session, get_current_user, get_current_admin
+from src.config.dependencies import get_async_session, get_current_user, get_current_admin_or_moderator
 
 router = APIRouter()
 
@@ -165,7 +165,7 @@ async def get_all_orders_admin(
     user_id: Optional[int] = Query(None),
     status_filter: Optional[str] = Query(None),
     db: AsyncSession = Depends(get_async_session),
-    _: dict = Depends(get_current_admin)
+    _: dict = Depends(get_current_admin_or_moderator)
 ):
     query = select(Order)
     if user_id:

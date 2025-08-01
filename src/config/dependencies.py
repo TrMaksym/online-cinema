@@ -13,6 +13,8 @@ from src.security.jwt import JWTAuthManager
 from src.security.interfaces import JWTAuthManagerInterface
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import AsyncGenerator
+from src.storage.interfaces import S3StorageInterface
+from src.storage.s3 import S3StorageClient
 
 from src.database.session_postgresql import async_session_maker
 

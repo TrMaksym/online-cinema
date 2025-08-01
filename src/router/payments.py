@@ -7,11 +7,11 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 
-from config.dependencies import get_async_session, get_current_user, get_current_admin_or_moderator
-from database.models.orders import Order
-from database.models.payments import Payment
-from notifications.email import AsyncEmailService
-from schemas.payments import PaymentResponse, PaymentStatusEnum
+from src.config.dependencies import get_async_session, get_current_user, get_current_admin_or_moderator
+from src.database.models.orders import Order
+from src.database.models.payments import Payment
+from src.notifications.email import AsyncEmailService
+from src.schemas.payments import PaymentResponse, PaymentStatusEnum
 
 router = APIRouter()
 

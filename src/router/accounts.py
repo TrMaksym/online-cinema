@@ -6,10 +6,10 @@ from sqlalchemy.future import select
 from uuid import uuid4
 from datetime import datetime, timedelta
 
-from src.config.dependencies import get_email_sender
+from src.config.dependencies import get_email_sender, get_current_user
 from src.schemas.accounts import ResendActivationEmailRequest, ChangePasswordRequest
 from src.schemas.accounts import RegisterRequest, RegisterResponse, LoginRequest, ForgotPasswordRequest, PasswordResetToken
-from src.database.session_postgresql import get_async_session
+from src.config.dependencies import get_async_session
 from src.security.jwt import create_refresh_token, create_access_token
 from src.security.password import get_password_hash, verify_password
 from src.database.models.accounts import User, ActivationToken, RefreshToken, UserGroupEnum, UserGroup, \
@@ -286,3 +286,29 @@ async def activate_user_admin(
     await db.commit()
     return {"message": "User activated successfully"}
 
+@router.post("/admin/create-admin/")
+async def create_admin(
+        data: RegisterRequest,
+        db: AsyncSession = Depends(get_async_session),
+        current_user: User = Depends(get_current_user)
+):
+    if current_user.group.name != "admin":
+        raise HTTPException(status_code=403, detail="Insufficient permissions")
+
+    hashed_password = get_password_hash(data.password)
+    admin_group_result = await db.execute(select(UserGroup).where(UserGroup.name == "admin"))
+    admin_group = admin_group_result.scalars().first()
+    if not admin_group:
+        raise HTTPException(status_code=404, detail="Admin group not found")
+
+    new_admin = User(
+        email=data.email,
+        hashed_password=hashed_password,
+        is_active=True,
+        created_at=datetime.utcnow(),
+        updated_at=datetime.utcnow(),
+        group_id=admin_group.id
+    )
+    db.add(new_admin)
+    await db.commit()
+    return {"message": "Admin created successfully"}
