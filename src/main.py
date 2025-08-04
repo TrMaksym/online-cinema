@@ -14,16 +14,29 @@ app = FastAPI()
 
 api_version_prefix = "/api/v1"
 
-app.include_router(router_movies, prefix=f"{api_version_prefix}/movies", tags=["movies"])
-app.include_router(accounts_router, prefix=f"{api_version_prefix}/accounts", tags=["accounts"])
-app.include_router(orders_router, prefix=f"{api_version_prefix}/orders", tags=["orders"])
-app.include_router(payments_router, prefix=f"{api_version_prefix}/payments", tags=["payments"])
-app.include_router(shopping_cart_router, prefix=f"{api_version_prefix}/shopping-cart", tags=["shopping_cart"])
+app.include_router(
+    router_movies, prefix=f"{api_version_prefix}/movies", tags=["movies"]
+)
+app.include_router(
+    accounts_router, prefix=f"{api_version_prefix}/accounts", tags=["accounts"]
+)
+app.include_router(
+    orders_router, prefix=f"{api_version_prefix}/orders", tags=["orders"]
+)
+app.include_router(
+    payments_router, prefix=f"{api_version_prefix}/payments", tags=["payments"]
+)
+app.include_router(
+    shopping_cart_router,
+    prefix=f"{api_version_prefix}/shopping-cart",
+    tags=["shopping_cart"],
+)
 
 
 @app.get("/docs", include_in_schema=False)
-async def custom_swagger_ui(current_user = Depends(get_current_user)):
+async def custom_swagger_ui(current_user=Depends(get_current_user)):
     return get_swagger_ui_html(openapi_url="/openapi.json", title="API docs")
+
 
 @app.get("/openapi.json", include_in_schema=False)
 async def openapi(current_user=Depends(get_current_user)):

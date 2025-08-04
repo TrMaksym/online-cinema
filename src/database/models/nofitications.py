@@ -2,6 +2,7 @@ from sqlalchemy import Column, Integer, ForeignKey, Boolean, DateTime, Text
 from sqlalchemy.sql import func
 from .base import Base
 
+
 class Notification(Base):
     __tablename__ = "notifications"
 

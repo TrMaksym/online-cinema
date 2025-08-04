@@ -8,12 +8,24 @@ from datetime import datetime, timedelta
 
 from src.config.dependencies import get_email_sender, get_current_user
 from src.schemas.accounts import ResendActivationEmailRequest, ChangePasswordRequest
-from src.schemas.accounts import RegisterRequest, RegisterResponse, LoginRequest, ForgotPasswordRequest, PasswordResetToken
+from src.schemas.accounts import (
+    RegisterRequest,
+    RegisterResponse,
+    LoginRequest,
+    ForgotPasswordRequest,
+    PasswordResetToken,
+)
 from src.config.dependencies import get_async_session
 from src.security.jwt import create_refresh_token, create_access_token
 from src.security.password import get_password_hash, verify_password
-from src.database.models.accounts import User, ActivationToken, RefreshToken, UserGroupEnum, UserGroup, \
-    UserResetPassword
+from src.database.models.accounts import (
+    User,
+    ActivationToken,
+    RefreshToken,
+    UserGroupEnum,
+    UserGroup,
+    UserResetPassword,
+)
 from src.notifications.email import AsyncEmailService
 from src.tasks.accounts import send_reset_email_async
 from src.validation.accounts import validate_password_complexity
@@ -22,11 +34,14 @@ router = APIRouter()
 
 BASE_URL = os.getenv("BASE_URL", "http://localhost:8000")
 
-@router.post("/register/", response_model=RegisterResponse, status_code=status.HTTP_201_CREATED)
+
+@router.post(
+    "/register/", response_model=RegisterResponse, status_code=status.HTTP_201_CREATED
+)
 async def register_user(
     data: RegisterRequest,
     db: AsyncSession = Depends(get_async_session),
-    email_service: AsyncEmailService = Depends(get_email_sender)
+    email_service: AsyncEmailService = Depends(get_email_sender),
 ):
     result = await db.execute(select(User).where(User.email == data.email))
     existing_user = result.scalars().first()
@@ -34,13 +49,13 @@ async def register_user(
     if existing_user:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="User with this email already exists."
+            detail="User with this email already exists.",
         )
 
     if not validate_password_complexity(data.password):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Password must be at least 8 characters long and contain at least one number and one letter."
+            detail="Password must be at least 8 characters long and contain at least one number and one letter.",
         )
 
     hashed_password = get_password_hash(data.password)
@@ -50,7 +65,7 @@ async def register_user(
         is_active=False,
         created_at=datetime.utcnow(),
         updated_at=datetime.utcnow(),
-        group_id=1
+        group_id=1,
     )
     db.add(new_user)
     await db.flush()
@@ -70,15 +85,15 @@ async def register_user(
 
     return RegisterResponse(
         email=data.email,
-        message="Registration successful. Please check your email to activate your account."
+        message="Registration successful. Please check your email to activate your account.",
     )
 
 
 @router.post("/reset-activation/")
 async def resend_activation(
-        data: ResendActivationEmailRequest,
-        db: AsyncSession = Depends(get_async_session),
-        email: AsyncEmailService = Depends(get_email_sender)
+    data: ResendActivationEmailRequest,
+    db: AsyncSession = Depends(get_async_session),
+    email: AsyncEmailService = Depends(get_email_sender),
 ):
     result = await db.execute(select(User).where(User.email == data.email))
     user = result.scalars().first()
@@ -86,13 +101,12 @@ async def resend_activation(
     if not user:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="User with this email does not exist."
+            detail="User with this email does not exist.",
         )
 
     if user.is_active:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="User is already active."
+            status_code=status.HTTP_400_BAD_REQUEST, detail="User is already active."
         )
 
     activation_token = ActivationToken(
@@ -104,31 +118,29 @@ async def resend_activation(
     await db.commit()
 
     activation_link = f"{BASE_URL}/activate/{activation_token.token}"
-    await email.send_account_activation(recipient_email=data.email, activation_url=activation_link)
+    await email.send_account_activation(
+        recipient_email=data.email, activation_url=activation_link
+    )
 
     return RegisterResponse(
         email=data.email,
-        message="Registration successful. Please check your email to activate your account."
+        message="Registration successful. Please check your email to activate your account.",
     )
 
 
 @router.post("/login/")
-async def login(
-        data: LoginRequest,
-        db: AsyncSession = Depends(get_async_session)
-):
+async def login(data: LoginRequest, db: AsyncSession = Depends(get_async_session)):
     result = await db.execute(select(User).where(User.email == data.email))
     user = result.scalars().first()
 
     if not user or not verify_password(data.password, user.hashed_password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect email or password."
+            detail="Incorrect email or password.",
         )
     if not user.is_active:
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Accounts not activated."
+            status_code=status.HTTP_403_FORBIDDEN, detail="Accounts not activated."
         )
 
     access_token = create_access_token(user.id)
@@ -138,9 +150,7 @@ async def login(
 
     db.add(
         RefreshToken(
-            user_id=user.id,
-            token=refresh_token,
-            expires_at=refresh_expires_at
+            user_id=user.id, token=refresh_token, expires_at=refresh_expires_at
         )
     )
 
@@ -148,20 +158,24 @@ async def login(
 
     return {"access_token": access_token, "refresh_token": refresh_token}
 
+
 @router.post("/logout/")
 async def logout(refresh_token: str, db: AsyncSession = Depends(get_async_session)):
     await db.execute(delete(RefreshToken).where(RefreshToken.token == refresh_token))
     await db.commit()
     return {"message": "Successfully logged out."}
 
+
 @router.post("/forgot-password/")
-async def forgot_password(data: ForgotPasswordRequest, db: AsyncSession = Depends(get_async_session)):
+async def forgot_password(
+    data: ForgotPasswordRequest, db: AsyncSession = Depends(get_async_session)
+):
     result = await db.execute(select(User).where(User.email == data.email))
     user = result.scalars().first()
     if not user or not user.is_active:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="User with this email does not exist or is not active."
+            detail="User with this email does not exist or is not active.",
         )
 
     token = str(uuid4())
@@ -173,32 +187,45 @@ async def forgot_password(data: ForgotPasswordRequest, db: AsyncSession = Depend
     await send_reset_email_async(user.email, reset_link)
     return {"message": "Password reset email sent."}
 
+
 @router.put("/admin/change-group/{user_id}")
 async def change_user_group(
     user_id: int,
     new_group: UserGroupEnum,
-    db: AsyncSession = Depends(get_async_session)
+    db: AsyncSession = Depends(get_async_session),
 ):
     user = await db.get(User, user_id)
     if not user:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
+        )
 
-    result = await db.execute(select(UserGroup).where(UserGroup.name == new_group.value))
+    result = await db.execute(
+        select(UserGroup).where(UserGroup.name == new_group.value)
+    )
     group = result.scalars().first()
     if not group:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Group not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Group not found"
+        )
 
     user.group_id = group.id
     await db.commit()
     return {"message": "Group updated"}
 
+
 @router.get("/activate/{token}")
 async def activate_user(token: str, db: AsyncSession = Depends(get_async_session)):
-    result = await db.execute(select(ActivationToken).where(ActivationToken.token == token))
+    result = await db.execute(
+        select(ActivationToken).where(ActivationToken.token == token)
+    )
     activation_token = result.scalars().first()
 
     if not activation_token or activation_token.expires_at < datetime.utcnow():
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid activation token or expired")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid activation token or expired",
+        )
 
     user = await db.get(User, activation_token.user_id)
     if user.is_active:
@@ -209,19 +236,27 @@ async def activate_user(token: str, db: AsyncSession = Depends(get_async_session
     await db.commit()
     return {"message": "Account activated successfully"}
 
+
 @router.put("/reset-password/{token}")
-async def reset_password(token: str, new_password: str, db: AsyncSession = Depends(get_async_session)):
-    result = await db.execute(select(PasswordResetToken).where(PasswordResetToken.token == token))
+async def reset_password(
+    token: str, new_password: str, db: AsyncSession = Depends(get_async_session)
+):
+    result = await db.execute(
+        select(PasswordResetToken).where(PasswordResetToken.token == token)
+    )
     reset_token = result.scalars().first()
 
     if not reset_token or reset_token.expires_at < datetime.utcnow():
-        raise HTTPException(status_code=400, detail="Invalid or expired password reset token")
+        raise HTTPException(
+            status_code=400, detail="Invalid or expired password reset token"
+        )
 
     user = await db.get(User, reset_token.user_id)
 
     if not validate_password_complexity(new_password):
-        raise HTTPException(status_code=400,
-            detail="Password must be at least 8 characters long and include an uppercase letter, number, and special character."
+        raise HTTPException(
+            status_code=400,
+            detail="Password must be at least 8 characters long and include an uppercase letter, number, and special character.",
         )
 
     user.hashed_password = get_password_hash(new_password)
@@ -231,10 +266,10 @@ async def reset_password(token: str, new_password: str, db: AsyncSession = Depen
 
     return {"message": "Password successfully reset"}
 
+
 @router.put("/change-password/")
 async def change_password(
-    data: ChangePasswordRequest,
-    db: AsyncSession = Depends(get_async_session)
+    data: ChangePasswordRequest, db: AsyncSession = Depends(get_async_session)
 ):
     result = await db.execute(select(User).where(User.email == data.email))
     user = result.scalars().first()
@@ -246,8 +281,9 @@ async def change_password(
         raise HTTPException(status_code=400, detail="Current password is incorrect")
 
     if not validate_password_complexity(data.new_password):
-        raise HTTPException(status_code=400,
-            detail="Password must be at least 8 characters long and include an uppercase letter, number, and special character."
+        raise HTTPException(
+            status_code=400,
+            detail="Password must be at least 8 characters long and include an uppercase letter, number, and special character.",
         )
 
     user.hashed_password = get_password_hash(data.new_password)
@@ -255,12 +291,14 @@ async def change_password(
 
     return {"message": "Password changed successfully"}
 
+
 @router.post("/refresh-token/")
 async def refresh_access_token(
-        refresh_token: str,
-        db: AsyncSession = Depends(get_async_session)
+    refresh_token: str, db: AsyncSession = Depends(get_async_session)
 ):
-    result = await db.execute(select(RefreshToken).where(RefreshToken.token == refresh_token))
+    result = await db.execute(
+        select(RefreshToken).where(RefreshToken.token == refresh_token)
+    )
     token_record = result.scalars().first()
 
     if not token_record or token_record.expires_at < datetime.utcnow():
@@ -272,8 +310,7 @@ async def refresh_access_token(
 
 @router.put("/admin/activate-user/{user_id}")
 async def activate_user_admin(
-        user_id: int,
-        db: AsyncSession = Depends(get_async_session)
+    user_id: int, db: AsyncSession = Depends(get_async_session)
 ):
     user = await db.get(User, user_id)
     if not user:
@@ -286,17 +323,20 @@ async def activate_user_admin(
     await db.commit()
     return {"message": "User activated successfully"}
 
+
 @router.post("/admin/create-admin/")
 async def create_admin(
-        data: RegisterRequest,
-        db: AsyncSession = Depends(get_async_session),
-        current_user: User = Depends(get_current_user)
+    data: RegisterRequest,
+    db: AsyncSession = Depends(get_async_session),
+    current_user: User = Depends(get_current_user),
 ):
     if current_user.group.name != "admin":
         raise HTTPException(status_code=403, detail="Insufficient permissions")
 
     hashed_password = get_password_hash(data.password)
-    admin_group_result = await db.execute(select(UserGroup).where(UserGroup.name == "admin"))
+    admin_group_result = await db.execute(
+        select(UserGroup).where(UserGroup.name == "admin")
+    )
     admin_group = admin_group_result.scalars().first()
     if not admin_group:
         raise HTTPException(status_code=404, detail="Admin group not found")
@@ -307,7 +347,7 @@ async def create_admin(
         is_active=True,
         created_at=datetime.utcnow(),
         updated_at=datetime.utcnow(),
-        group_id=admin_group.id
+        group_id=admin_group.id,
     )
     db.add(new_admin)
     await db.commit()

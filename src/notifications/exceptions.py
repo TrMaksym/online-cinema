@@ -1,6 +1,6 @@
-
 class EmailDeliveryError(Exception):
     pass
+
 
 class BaseS3Error(Exception):
 

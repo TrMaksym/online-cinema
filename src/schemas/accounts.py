@@ -2,8 +2,7 @@ import re
 from datetime import datetime, date
 from typing import Optional
 
-from pydantic import validator, EmailStr
-from pydantic.v1 import BaseModel, constr
+from pydantic import BaseModel, constr, validator, EmailStr
 
 
 class UserSchema(BaseModel):
@@ -65,9 +64,16 @@ class RegisterRequest(BaseModel):
 
     @validator("password")
     def validate_password(cls, v):
-        if len(v) < 8 or not re.search(r"[A-Z]", v) or not re.search(r"[a-z]", v) \
-                or not re.search(r"[0-9]", v) or not re.search(r"[!@#$%^&*]", v):
-            raise ValueError("Password must be at least 8 characters long, contain at least one uppercase, ")
+        if (
+            len(v) < 8
+            or not re.search(r"[A-Z]", v)
+            or not re.search(r"[a-z]", v)
+            or not re.search(r"[0-9]", v)
+            or not re.search(r"[!@#$%^&*]", v)
+        ):
+            raise ValueError(
+                "Password must be at least 8 characters long, contain at least one uppercase, "
+            )
         return v
 
 
@@ -88,6 +94,7 @@ class LoginRequest(BaseModel):
 class ForgotPasswordRequest(BaseModel):
     email: EmailStr
 
+
 class ResetPasswordRequest(BaseModel):
     token: str
     new_password: str
@@ -97,6 +104,7 @@ class PasswordResetToken(BaseModel):
     user_id: int
     token: str
     expires_at: datetime
+
 
 class ChangePasswordRequest(BaseModel):
     email: str

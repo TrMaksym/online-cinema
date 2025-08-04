@@ -16,7 +16,9 @@ from src.database.models.accounts import UserResetPassword
 async def delete_expired_activation_tokens():
     async with async_session_maker() as session:
         await session.execute(
-            delete(ActivationToken).where(ActivationToken.expires_at < datetime.utcnow())
+            delete(ActivationToken).where(
+                ActivationToken.expires_at < datetime.utcnow()
+            )
         )
         await session.commit()
 
@@ -38,15 +40,14 @@ async def delete_expired_tokens():
         await session.execute(
             delete(UserResetPassword).where(UserResetPassword.expires_at < now)
         )
-        await session.execute(
-            delete(RefreshToken).where(RefreshToken.expires_at < now)
-        )
+        await session.execute(delete(RefreshToken).where(RefreshToken.expires_at < now))
         await session.commit()
 
 
 @shared_task
 def send_activation_email_task(email, activation_link):
     asyncio.run(_send_email(email, activation_link))
+
 
 async def _send_email(email, activation_link):
     email_service = AsyncEmailService()

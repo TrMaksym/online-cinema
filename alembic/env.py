@@ -9,13 +9,14 @@ from sqlalchemy import engine_from_config
 from sqlalchemy import pool
 
 from alembic import context
+from src.config.settings import DevSettings
 
-from database.models.base import Base
-from database.models.accounts import *
-from database.models.movies import *
-from database.models.orders import *
-from database.models.payments import *
-from database.models.shopping_cart import *
+from src.database.models.base import Base
+from src.database.models.accounts import *
+from src.database.models.movies import *
+from src.database.models.orders import *
+from src.database.models.payments import *
+from src.database.models.shopping_cart import *
 
 
 # this is the Alembic Config object, which provides
@@ -37,6 +38,12 @@ target_metadata = Base.metadata
 # can be acquired:
 # my_important_option = config.get_main_option("my_important_option")
 # ... etc.
+
+database_url = "postgresql+psycopg2://admin_movies:password_cinema@postgres_theater:5432/movies_password"
+config.set_main_option("sqlalchemy.url", database_url)
+
+
+config.set_main_option("sqlalchemy.url", database_url)
 
 
 def run_migrations_offline() -> None:
@@ -77,9 +84,7 @@ def run_migrations_online() -> None:
     )
 
     with connectable.connect() as connection:
-        context.configure(
-            connection=connection, target_metadata=target_metadata
-        )
+        context.configure(connection=connection, target_metadata=target_metadata)
 
         with context.begin_transaction():
             context.run_migrations()

@@ -7,6 +7,7 @@ import aiosmtplib
 from .exceptions import EmailDeliveryError
 from src.notifications.interfaces import EmailServiceProtocol
 
+
 class AsyncEmailService(EmailServiceProtocol):
     def __init__(
         self,
@@ -31,9 +32,7 @@ class AsyncEmailService(EmailServiceProtocol):
 
         try:
             smtp = aiosmtplib.SMTP(
-                hostname=self._smtp_host,
-                port=self._smtp_port,
-                start_tls=self._use_tls
+                hostname=self._smtp_host, port=self._smtp_port, start_tls=self._use_tls
             )
             await smtp.connect()
             if self._use_tls:
@@ -48,7 +47,9 @@ class AsyncEmailService(EmailServiceProtocol):
     async def send_email(self, recipient: str, subject: str, body_text: str) -> None:
         await self._send(recipient, subject, body_text)
 
-    async def send_account_activation(self, recipient_email: str, activation_url: str) -> None:
+    async def send_account_activation(
+        self, recipient_email: str, activation_url: str
+    ) -> None:
         subject = "Account Activation"
         body = (
             f"Hello,\n\n"
@@ -57,7 +58,9 @@ class AsyncEmailService(EmailServiceProtocol):
         )
         await self._send(recipient_email, subject, body)
 
-    async def notify_activation_success(self, recipient_email: str, dashboard_url: str) -> None:
+    async def notify_activation_success(
+        self, recipient_email: str, dashboard_url: str
+    ) -> None:
         subject = "Your Account Has Been Activated"
         body = (
             f"Hello,\n\n"
@@ -67,7 +70,9 @@ class AsyncEmailService(EmailServiceProtocol):
         )
         await self._send(recipient_email, subject, body)
 
-    async def send_password_reset_request(self, recipient_email: str, reset_url: str) -> None:
+    async def send_password_reset_request(
+        self, recipient_email: str, reset_url: str
+    ) -> None:
         subject = "Password Reset Request"
         body = (
             f"Hello,\n\n"
@@ -77,7 +82,9 @@ class AsyncEmailService(EmailServiceProtocol):
         )
         await self._send(recipient_email, subject, body)
 
-    async def confirm_password_reset(self, recipient_email: str, login_url: str) -> None:
+    async def confirm_password_reset(
+        self, recipient_email: str, login_url: str
+    ) -> None:
         subject = "Password Changed Successfully"
         body = (
             f"Hello,\n\n"

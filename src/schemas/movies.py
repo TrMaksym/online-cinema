@@ -1,7 +1,6 @@
 from typing import Optional, List
 
-from pydantic import conint
-from pydantic.v1 import BaseModel, constr, condecimal
+from pydantic import BaseModel, constr, condecimal, conint
 import uuid
 
 
@@ -21,6 +20,7 @@ class MovieSchema(BaseModel):
 
     class Config:
         orm_mode = True
+
 
 class MovieCreateSchema(BaseModel):
     name: constr(max_length=250)
@@ -108,6 +108,7 @@ class LikeDislikeCreateSchema(BaseModel):
     movie_id: int
     like: bool
 
+
 class LikeDislikeResponseSchema(BaseModel):
     movie_id: int
     user_id: int
@@ -116,11 +117,13 @@ class LikeDislikeResponseSchema(BaseModel):
     class Config:
         orm_mode = True
 
+
 class CommentCreateSchema(BaseModel):
     user_id: int
     movie_id: int
     parent_comment_id: Optional[int] = None
     text: constr(min_length=1)
+
 
 class CommentSchema(BaseModel):
     id: int
@@ -128,7 +131,7 @@ class CommentSchema(BaseModel):
     movie_id: int
     parent_comment_id: Optional[int]
     text: str
-    replies: Optional[List['CommentSchema']] = []
+    replies: Optional[List["CommentSchema"]] = []
 
     class Config:
         orm_mode = True
@@ -137,6 +140,7 @@ class CommentSchema(BaseModel):
 class FavoriteCreateSchema(BaseModel):
     user_id: int
     movie_id: int
+
 
 class FavoriteResponseSchema(BaseModel):
     id: int

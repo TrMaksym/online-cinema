@@ -3,11 +3,13 @@ from datetime import datetime
 from enum import Enum
 from typing import Optional
 
+
 class PaymentStatusEnum(str, Enum):
     pending = "pending"
     successful = "successful"
     canceled = "canceled"
     refunded = "refunded"
+
 
 class PaymentResponse(BaseModel):
     id: int

@@ -2,7 +2,7 @@ import os
 from pathlib import Path
 from typing import Any
 
-from pydantic import BaseSettings
+from pydantic_settings import BaseSettings
 
 
 class AppCoreSettings(BaseSettings):
@@ -53,5 +53,9 @@ class TestSettings(AppCoreSettings):
     JWT_ALGORITHM: str = "HS256"
 
     def model_post_init(self, __context: dict[str, Any] | None = None) -> None:
-        object.__setattr__(self, 'DB_PATH', ":memory:")
-        object.__setattr__(self, 'CSV_MOVIES_PATH', str(self.ROOT_DIR / "database" / "seed_data" / "test_data.csv"))
+        object.__setattr__(self, "DB_PATH", ":memory:")
+        object.__setattr__(
+            self,
+            "CSV_MOVIES_PATH",
+            str(self.ROOT_DIR / "database" / "seed_data" / "test_data.csv"),
+        )

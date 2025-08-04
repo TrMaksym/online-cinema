@@ -2,7 +2,17 @@ from datetime import datetime, date, timedelta
 from typing import Optional
 
 import enum
-from sqlalchemy import Column, Integer, String, Boolean, DateTime, ForeignKey, Text, Date, Enum
+from sqlalchemy import (
+    Column,
+    Integer,
+    String,
+    Boolean,
+    DateTime,
+    ForeignKey,
+    Text,
+    Date,
+    Enum,
+)
 from sqlalchemy.orm import relationship, Mapped, mapped_column
 
 from .base import Base
@@ -13,16 +23,21 @@ class UserGroupEnum(str, enum.Enum):
     MODERATOR = "MODERATOR"
     ADMIN = "ADMIN"
 
+
 class GenderEnum(str, enum.Enum):
     MALE = "MALE"
     FEMALE = "FEMALE"
+
 
 class UserGroup(Base):
     __tablename__ = "user_groups"
 
     id = Column(Integer, primary_key=True)
-    name: Mapped[UserGroupEnum] = mapped_column(Enum(UserGroupEnum), nullable=False, unique=True)
+    name: Mapped[UserGroupEnum] = mapped_column(
+        Enum(UserGroupEnum), nullable=False, unique=True
+    )
     users = relationship("User", back_populates="group")
+
 
 class User(Base):
     __tablename__ = "users"
@@ -40,7 +55,9 @@ class User(Base):
     payments = relationship("Payment", back_populates="user")
 
     activation_tokens = relationship("UserActivationToken", back_populates="user")
-    reset_password_tokens = relationship("UserResetPasswordToken", back_populates="user")
+    reset_password_tokens = relationship(
+        "UserResetPasswordToken", back_populates="user"
+    )
     refresh_tokens = relationship("RefreshToken", back_populates="user")
     favorites = relationship("Favorite", back_populates="user", cascade="all, delete")
 
@@ -65,7 +82,9 @@ class ActivationToken(Base):
     id = Column(Integer, primary_key=True)
     user_id = Column(Integer, ForeignKey("users.id"), unique=True, nullable=False)
     token = Column(String(255), unique=True, nullable=False)
-    expires_at = Column(DateTime, nullable=False, default=lambda: datetime.now() + timedelta(hours=24))
+    expires_at = Column(
+        DateTime, nullable=False, default=lambda: datetime.now() + timedelta(hours=24)
+    )
 
     user = relationship("User", back_populates="activation_tokens")
 
@@ -76,7 +95,9 @@ class UserResetPassword(Base):
     id = Column(Integer, primary_key=True)
     user_id = Column(Integer, ForeignKey("users.id"), unique=True, nullable=False)
     token = Column(String(255), unique=True, nullable=False)
-    expires_at = Column(DateTime, nullable=False, default=lambda: datetime.now() + timedelta(hours=24))
+    expires_at = Column(
+        DateTime, nullable=False, default=lambda: datetime.now() + timedelta(hours=24)
+    )
 
     user = relationship("User", back_populates="reset_password_tokens")
 
@@ -87,6 +108,8 @@ class RefreshToken(Base):
     id = Column(Integer, primary_key=True)
     user_id = Column(Integer, ForeignKey("users.id"), unique=True, nullable=False)
     token = Column(String(255), unique=True, nullable=False)
-    expires_at = Column(DateTime, nullable=False, default=lambda: datetime.now() + timedelta(hours=24))
+    expires_at = Column(
+        DateTime, nullable=False, default=lambda: datetime.now() + timedelta(hours=24)
+    )
 
     user = relationship("User", back_populates="refresh_tokens")

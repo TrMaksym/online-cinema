@@ -17,18 +17,21 @@ class Order(Base):
 
     id = Column(Integer, primary_key=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
-    created_at = Column(DateTime(timezone=True), nullable=False, default=datetime.utcnow)
+    created_at = Column(
+        DateTime(timezone=True), nullable=False, default=datetime.utcnow
+    )
     status: Mapped[OrderStatusEnum] = mapped_column(
         SaEnum(OrderStatusEnum, name="orderstatusenum"),
         nullable=False,
-        default=OrderStatusEnum.pending
+        default=OrderStatusEnum.pending,
     )
     total_amount = Column(Numeric(10, 2), nullable=True)
 
     user = relationship("User", back_populates="orders")
-    order_items = relationship("OrderItem", back_populates="order", cascade="all, delete-orphan")
+    order_items = relationship(
+        "OrderItem", back_populates="order", cascade="all, delete-orphan"
+    )
     payments = relationship("Payment", back_populates="order")
-
 
 
 class OrderItem(Base):

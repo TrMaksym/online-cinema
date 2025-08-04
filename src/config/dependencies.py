@@ -63,6 +63,7 @@ async def get_async_session() -> AsyncGenerator[AsyncSession, None]:
     async with async_session_maker() as session:
         yield session
 
+
 async def get_current_user(
     token: str = Depends(oauth2_scheme),
     db: AsyncSession = Depends(get_async_session),
@@ -80,14 +81,17 @@ async def get_current_user(
     result = await db.execute(query)
     user = result.scalars().first()
     if not user:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found"
+        )
     return user
 
 
-async def get_current_admin_or_moderator(current_user: User = Depends(get_current_user)):
+async def get_current_admin_or_moderator(
+    current_user: User = Depends(get_current_user),
+):
     if current_user.role not in ("admin", "moderator"):
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Insufficient permissions"
+            status_code=status.HTTP_403_FORBIDDEN, detail="Insufficient permissions"
         )
     return current_user
