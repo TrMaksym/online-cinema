@@ -330,12 +330,12 @@ async def create_admin(
     db: AsyncSession = Depends(get_async_session),
     current_user: User = Depends(get_current_user),
 ):
-    if current_user.group.name != "admin":
+    if current_user.group.name != UserGroupEnum.ADMIN:
         raise HTTPException(status_code=403, detail="Insufficient permissions")
 
     hashed_password = get_password_hash(data.password)
     admin_group_result = await db.execute(
-        select(UserGroup).where(UserGroup.name == "admin")
+        select(UserGroup).where(UserGroup.name == UserGroupEnum.ADMIN)
     )
     admin_group = admin_group_result.scalars().first()
     if not admin_group:
