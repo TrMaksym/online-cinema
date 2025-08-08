@@ -1,10 +1,12 @@
+from datetime import datetime
 from typing import Optional
+import uuid
+from sqlalchemy.dialects.postgresql import UUID
 
 from sqlalchemy import (
     Column,
     Integer,
     String,
-    UUID,
     Float,
     DECIMAL,
     ForeignKey,
@@ -14,12 +16,10 @@ from sqlalchemy import (
     func,
     UniqueConstraint,
 )
-from sqlalchemy.orm import relationship, Mapped
-import uuid
-
-from sqlalchemy.testing.schema import mapped_column
+from sqlalchemy.orm import relationship, Mapped, mapped_column
 
 from .base import Base
+
 
 movie_genres = Table(
     "movie_genres",
@@ -46,115 +46,117 @@ movie_stars = Table(
 class Genre(Base):
     __tablename__ = "genres"
 
-    id = Column(Integer, primary_key=True)
-    name = Column(String(100), unique=True, nullable=False)
-    movie_genres = relationship("Movie", back_populates="genre")
+    id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str] = mapped_column(String(100), unique=True, nullable=False)
+    movies: Mapped[list["Movie"]] = relationship(
+        "Movie", secondary=movie_genres, back_populates="genres"
+    )
 
 
 class Star(Base):
     __tablename__ = "stars"
 
-    id = Column(Integer, primary_key=True)
-    name = Column(String(100), unique=True, nullable=False)
-    movie_start = relationship("Movie", back_populates="star")
+    id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str] = mapped_column(String(100), unique=True, nullable=False)
+    movies: Mapped[list["Movie"]] = relationship(
+        "Movie", secondary=movie_stars, back_populates="stars"
+    )
 
 
 class Director(Base):
     __tablename__ = "directors"
 
-    id = Column(Integer, primary_key=True)
-    name = Column(String(100), unique=True, nullable=False)
-    movie_directors = relationship("Movie", back_populates="director")
+    id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str] = mapped_column(String(100), unique=True, nullable=False)
+    movies: Mapped[list["Movie"]] = relationship(
+        "Movie", secondary=movie_directors, back_populates="directors"
+    )
 
 
 class Certification(Base):
     __tablename__ = "certifications"
 
-    id = Column(Integer, primary_key=True)
-    name = Column(String(100), unique=True, nullable=False)
-    movie_certifications = relationship("Movie", back_populates="certification")
+    id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str] = mapped_column(String(100), unique=True, nullable=False)
+    movies: Mapped[list["Movie"]] = relationship("Movie", back_populates="certification")
 
 
 class Movie(Base):
     __tablename__ = "movies"
 
-    id = Column(Integer, primary_key=True)
-    uuid = Column(UUID(as_uuid=True), unique=True, nullable=False, default=uuid.uuid4)
-    name = Column(String(100), nullable=False)
-    year = Column(Integer, nullable=False)
-    time = Column(Integer, nullable=False)
-    imdb = Column(Float, nullable=False)
-    votes = Column(Integer, nullable=False)
+    id: Mapped[int] = mapped_column(primary_key=True)
+
+    uuid: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        unique=True,
+        nullable=False,
+    )
+    name: Mapped[str] = mapped_column(String(100), nullable=False)
+    year: Mapped[int] = mapped_column(Integer, nullable=False)
+    time: Mapped[int] = mapped_column(Integer, nullable=False)
+    imdb: Mapped[float] = mapped_column(Float, nullable=False)
+    votes: Mapped[int] = mapped_column(Integer, nullable=False)
     meta_score: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
     gross: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
-    description = Column(String(255), nullable=False)
-    price = Column(DECIMAL(10, 2), nullable=False)
-    certification_id = Column(Integer, ForeignKey("certifications.id"), nullable=False)
+    description: Mapped[str] = mapped_column(String(255), nullable=False)
+    price: Mapped[float] = mapped_column(DECIMAL(10, 2), nullable=False)
+    certification_id: Mapped[int] = mapped_column(ForeignKey("certifications.id"), nullable=False)
 
-    certification = relationship("Certification", backref="movies")
-    genres = relationship("Genre", secondary=movie_genres, backref="movies")
-    directors = relationship("Director", secondary=movie_directors, backref="movies")
-    stars = relationship("Star", secondary=movie_stars, backref="movies")
-    favorited_by = relationship(
+    certification: Mapped["Certification"] = relationship("Certification", back_populates="movies")
+    genres: Mapped[list[Genre]] = relationship("Genre", secondary=movie_genres, back_populates="movies")
+    directors: Mapped[list[Director]] = relationship("Director", secondary=movie_directors, back_populates="movies")
+    stars: Mapped[list[Star]] = relationship("Star", secondary=movie_stars, back_populates="movies")
+    favorited_by: Mapped[list["Favorite"]] = relationship(
         "Favorite", back_populates="movie", cascade="all, delete"
     )
-    purchases = relationship("Purchase", back_populates="movie", cascade="all, delete")
+    purchases: Mapped[list["Purchase"]] = relationship("Purchase", back_populates="movie", cascade="all, delete")
 
 
 class MovieRating(Base):
     __tablename__ = "movie_ratings"
-    id = Column(Integer, primary_key=True, index=True)
-    movie_id = Column(
-        Integer, ForeignKey("movies.id", ondelete="CASCADE"), nullable=False
-    )
-    user_id = Column(Integer, nullable=False)
-    rating = Column(Integer, nullable=False)
 
-    __table_args__ = (
-        UniqueConstraint("movie_id", "user_id", name="_user_movie_rating_uc"),
-    )
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    movie_id: Mapped[int] = mapped_column(ForeignKey("movies.id", ondelete="CASCADE"), nullable=False)
+    user_id: Mapped[int] = mapped_column(Integer, nullable=False)
+    rating: Mapped[int] = mapped_column(Integer, nullable=False)
+
+    __table_args__ = (UniqueConstraint("movie_id", "user_id", name="_user_movie_rating_uc"),)
 
 
 class MovieLikeDislike(Base):
     __tablename__ = "movie_likes_dislikes"
-    id = Column(Integer, primary_key=True, index=True)
-    movie_id = Column(
-        Integer, ForeignKey("movies.id", ondelete="CASCADE"), nullable=False
-    )
-    user_id = Column(Integer, nullable=False)
-    is_like = Column(Integer, nullable=False)
 
-    __table_args__ = (
-        UniqueConstraint("movie_id", "user_id", name="_user_movie_like_uc"),
-    )
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    movie_id: Mapped[int] = mapped_column(ForeignKey("movies.id", ondelete="CASCADE"), nullable=False)
+    user_id: Mapped[int] = mapped_column(Integer, nullable=False)
+    is_like: Mapped[int] = mapped_column(Integer, nullable=False)
+
+    __table_args__ = (UniqueConstraint("movie_id", "user_id", name="_user_movie_like_uc"),)
 
 
 class MovieComment(Base):
     __tablename__ = "movie_comments"
-    id = Column(Integer, primary_key=True, index=True)
-    movie_id = Column(
-        Integer, ForeignKey("movies.id", ondelete="CASCADE"), nullable=False
-    )
-    user_id = Column(Integer, nullable=False)
-    parent_id = Column(
-        Integer, ForeignKey("movie_comments.id", ondelete="CASCADE"), nullable=True
-    )
-    content = Column(Text, nullable=False)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
-    replies = relationship("MovieComment", backref="parent", remote_side=[id])
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    movie_id: Mapped[int] = mapped_column(ForeignKey("movies.id", ondelete="CASCADE"), nullable=False)
+    user_id: Mapped[int] = mapped_column(Integer, nullable=False)
+    parent_id: Mapped[Optional[int]] = mapped_column(ForeignKey("movie_comments.id", ondelete="CASCADE"), nullable=True)
+    content: Mapped[str] = mapped_column(Text, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), onupdate=func.now())
+
+    replies: Mapped[list["MovieComment"]] = relationship("MovieComment", backref="parent", remote_side=[id])
 
 
 class Favorite(Base):
     __tablename__ = "favorites"
 
-    id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"))
-    movie_id = Column(Integer, ForeignKey("movies.id", ondelete="CASCADE"))
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    movie_id: Mapped[int] = mapped_column(ForeignKey("movies.id", ondelete="CASCADE"))
 
-    user = relationship("User", back_populates="favorites")
-    movie = relationship("Movie", back_populates="favorited_by")
+    user: Mapped["User"] = relationship("User", back_populates="favorites")
+    movie: Mapped["Movie"] = relationship("Movie", back_populates="favorited_by")
 
     __table_args__ = (UniqueConstraint("user_id", "movie_id", name="unique_favorite"),)
 
@@ -162,26 +164,22 @@ class Favorite(Base):
 class Purchase(Base):
     __tablename__ = "purchases"
 
-    id = Column(Integer, primary_key=True)
-    user_id = Column(
-        Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False
-    )
-    movie_id = Column(
-        Integer, ForeignKey("movies.id", ondelete="CASCADE"), nullable=False
-    )
-    purchased_at = Column(DateTime(timezone=True), server_default=func.now())
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    movie_id: Mapped[int] = mapped_column(ForeignKey("movies.id", ondelete="CASCADE"), nullable=False)
+    purchased_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
-    movie = relationship("Movie", back_populates="purchases")
+    movie: Mapped["Movie"] = relationship("Movie", back_populates="purchases")
 
 
 class Comment(Base):
     __tablename__ = "comments"
 
-    id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, nullable=False)
-    movie_id = Column(Integer, ForeignKey("movies.id"), nullable=False)
-    text = Column(Text, nullable=False)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-    parent_id = Column(Integer, ForeignKey("comments.id"), nullable=True)
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    user_id: Mapped[int] = mapped_column(Integer, nullable=False)
+    movie_id: Mapped[int] = mapped_column(ForeignKey("movies.id"), nullable=False)
+    text: Mapped[str] = mapped_column(Text, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    parent_id: Mapped[Optional[int]] = mapped_column(ForeignKey("comments.id"), nullable=True)
 
-    replies = relationship("Comment", backref="parent", remote_side=[id])
+    replies: Mapped[list["Comment"]] = relationship("Comment", backref="parent", remote_side=[id])

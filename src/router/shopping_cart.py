@@ -3,11 +3,11 @@ from fastapi.params import Depends
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from config.dependencies import get_async_session, get_current_user
-from database.models.movies import Movie
-from database.models.orders import OrderItem, Order
-from database.models.shopping_cart import Cart, CartItem
-from schemas.movies import MovieSchema
+from src.config.dependencies import get_async_session, get_current_user
+from src.database.models.movies import Movie
+from src.database.models.orders import OrderItem, Order
+from src.database.models.shopping_cart import Cart, CartItem
+from src.schemas.movies import MovieSchema
 
 router = APIRouter()
 

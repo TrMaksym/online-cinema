@@ -25,7 +25,7 @@ class CartItem(Base):
     id = Column(Integer, primary_key=True)
     cart_id = Column(Integer, ForeignKey("carts.id"), nullable=False)
     movie_id = Column(Integer, ForeignKey("movies.id"), nullable=False)
-    added_at = Column(DateTime, default=datetime.utcnow)
+    added_at = Column(DateTime(timezone=True), default=datetime.utcnow, nullable=False)
 
     cart = relationship("Cart", back_populates="items")
     movie = relationship("Movie")

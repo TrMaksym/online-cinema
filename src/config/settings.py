@@ -2,8 +2,11 @@ import os
 from pathlib import Path
 from typing import Any
 
+from dotenv import load_dotenv
 from pydantic_settings import BaseSettings
 
+env_path = Path(__file__).resolve().parent.parent / ".env"
+load_dotenv(dotenv_path=env_path)
 
 class AppCoreSettings(BaseSettings):
     ROOT_DIR: Path = Path(__file__).resolve().parent.parent
@@ -33,14 +36,17 @@ class AppCoreSettings(BaseSettings):
 
 
 class DevSettings(AppCoreSettings):
-    DB_USER: str = os.getenv("DB_USER", "postgres")
-    DB_PASSWORD: str = os.getenv("DB_PASSWORD", "password")
-    DB_HOST: str = os.getenv("DB_HOST", "localhost")
+    DB_USER: str = os.getenv("POSTGRES_USER", "admin_movies")
+    DB_PASSWORD: str = os.getenv("POSTGRES_PASSWORD", "password_cinema")
+    DB_HOST: str = os.getenv("POSTGRES_HOST", "db")
     DB_PORT: int = int(os.getenv("DB_PORT", 5432))
-    DB_NAME: str = os.getenv("DB_NAME", "app_db")
+    DB_NAME: str = os.getenv("POSTGRES_DB", "movies_password")
 
     @property
     def DATABASE_URL(self) -> str:
+        env_url = os.getenv("DATABASE_URL")
+        if env_url:
+            return env_url
         return (
             f"postgresql+asyncpg://{self.DB_USER}:{self.DB_PASSWORD}"
             f"@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"
@@ -59,3 +65,6 @@ class TestSettings(AppCoreSettings):
             "CSV_MOVIES_PATH",
             str(self.ROOT_DIR / "database" / "seed_data" / "test_data.csv"),
         )
+
+settings = DevSettings()
+print(settings.DATABASE_URL)

@@ -53,7 +53,7 @@ def upgrade() -> None:
     op.create_table(
         "movies",
         sa.Column("id", sa.Integer(), nullable=False),
-        sa.Column("uuid", sa.UUID(), nullable=False),
+        sa.Column("uuid", sa.dialects.postgresql.UUID(as_uuid=True), nullable=False, unique=True),
         sa.Column("name", sa.String(length=100), nullable=False),
         sa.Column("year", sa.Integer(), nullable=False),
         sa.Column("time", sa.Integer(), nullable=False),

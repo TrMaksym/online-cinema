@@ -11,9 +11,13 @@ from celery import shared_task
 from src.notifications.email import AsyncEmailService
 from src.database.models.accounts import UserResetPassword
 
-
 @celery_app.task
-async def delete_expired_activation_tokens():
+def delete_expired_activation_tokens():
+    import asyncio
+    asyncio.run(_delete_expired_activation_tokens_async())
+
+
+async def _delete_expired_activation_tokens_async():
     async with async_session_maker() as session:
         await session.execute(
             delete(ActivationToken).where(
@@ -24,14 +28,12 @@ async def delete_expired_activation_tokens():
 
 
 @shared_task
-def send_reset_email_async(email: str, token: str):
-    email_service = AsyncEmailService()
-    reset_link = f"http://127.0.0.1:8000/reset-password/{token}"
-    email_service.send_password_reset(email, reset_link)
+def delete_expired_tokens():
+    import asyncio
+    asyncio.run(_delete_expired_tokens_async())
 
 
-@shared_task
-async def delete_expired_tokens():
+async def _delete_expired_tokens_async():
     now = datetime.utcnow()
     async with async_session_maker() as session:
         await session.execute(
@@ -45,10 +47,35 @@ async def delete_expired_tokens():
 
 
 @shared_task
+def send_reset_email_async(email: str, token: str):
+    import asyncio
+    asyncio.run(_send_reset_email(email, token))
+
+async def _send_reset_email(email: str, token: str):
+    email_service = AsyncEmailService(
+        smtp_host="smtp.example.com",
+        smtp_port=587,
+        sender_email="noreply@example.com",
+        sender_password="yourpassword",
+        use_tls=True,
+    )
+    reset_link = f"http://127.0.0.1:8000/reset-password/{token}"
+    await email_service.send_password_reset_request(email, reset_link)
+
+
+
+@shared_task
 def send_activation_email_task(email, activation_link):
     asyncio.run(_send_email(email, activation_link))
 
 
 async def _send_email(email, activation_link):
-    email_service = AsyncEmailService()
+    email_service = AsyncEmailService(
+        smtp_host="smtp.example.com",
+        smtp_port=587,
+        sender_email="noreply@example.com",
+        sender_password="yourpassword",
+        use_tls=True,
+    )
     await email_service.send_account_activation(email, activation_link)
+

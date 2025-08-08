@@ -5,7 +5,7 @@ from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError
 from sqlalchemy import select
 
-from database.models.accounts import User, UserGroupEnum
+from src.database.models.accounts import User, UserGroupEnum
 from .settings import AppCoreSettings, DevSettings, TestSettings
 from src.notifications.email import AsyncEmailService
 from src.notifications.interfaces import EmailServiceProtocol
