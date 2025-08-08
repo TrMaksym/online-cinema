@@ -31,7 +31,7 @@ db_port = os.getenv("DB_PORT", "5432")
 db_name = os.getenv("DB_NAME", "movies_password")
 
 database_url = (
-    f"postgresql+asyncpg://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}"
+    f"postgresql+psycopg2://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}"
 )
 config.set_main_option("sqlalchemy.url", database_url)
 

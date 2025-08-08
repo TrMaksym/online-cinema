@@ -1,7 +1,8 @@
 from datetime import datetime
 
 from sqlalchemy import Column, Integer, ForeignKey, DateTime
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship, Mapped
+from src.database.models.accounts import User
 
 from .base import Base
 
@@ -17,6 +18,8 @@ class Cart(Base):
     items = relationship(
         "CartItem", back_populates="cart", cascade="all, delete-orphan"
     )
+    user: Mapped["User"] = relationship("User", back_populates="cart")
+
 
 
 class CartItem(Base):

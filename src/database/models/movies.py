@@ -1,6 +1,6 @@
 from datetime import datetime
 from typing import Optional
-import uuid
+import uuid as py_uuid
 from sqlalchemy.dialects.postgresql import UUID
 
 from sqlalchemy import (
@@ -86,7 +86,7 @@ class Movie(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
 
-    uuid: Mapped[uuid.UUID] = mapped_column(
+    uuid: Mapped[py_uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
         unique=True,
         nullable=False,

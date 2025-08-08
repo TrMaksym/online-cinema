@@ -59,6 +59,7 @@ class User(Base):
     reset_password_tokens: Mapped[list["UserResetPassword"]] = relationship("UserResetPassword", back_populates="user")
     refresh_tokens: Mapped[list["RefreshToken"]] = relationship("RefreshToken", back_populates="user")
     favorites: Mapped[list["Favorite"]] = relationship("Favorite", back_populates="user", cascade="all, delete")
+    cart: Mapped["Cart"] = relationship("Cart", back_populates="user", uselist=False)
 
 
 class UserProfile(Base):
