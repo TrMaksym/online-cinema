@@ -1,9 +1,12 @@
+import asyncio
 import os
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError
 from sqlalchemy import select
+import asyncpg
+from sqlalchemy.exc import DBAPIError
 
 from src.database.models.accounts import User, UserGroupEnum
 from .settings import AppCoreSettings, DevSettings, TestSettings
@@ -59,9 +62,23 @@ def get_s3_storage_client(
     )
 
 
-async def get_async_session() -> AsyncGenerator[AsyncSession, None]:
+async def get_session():
     async with async_session_maker() as session:
         yield session
+
+async def get_async_session() -> AsyncGenerator[AsyncSession, None]:
+    for i in range(10):
+        try:
+            async with async_session_maker() as session:
+                yield session
+            return
+        except (DBAPIError, asyncpg.exceptions.PostgresConnectionError, ConnectionRefusedError) as e:
+            print(f"Error connecting to database: {e}")
+            await asyncio.sleep(1)
+    raise HTTPException(
+        status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+        detail="Database is temporarily unavailable. Please try again later.",
+    )
 
 
 async def get_current_user(

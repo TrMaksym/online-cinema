@@ -109,15 +109,19 @@ async def resend_activation(
             status_code=status.HTTP_400_BAD_REQUEST, detail="User is already active."
         )
 
+    await db.execute(delete(ActivationToken).where(ActivationToken.user_id == user.id))
+    await db.flush()
+
+    new_token = str(uuid4())
     activation_token = ActivationToken(
         user_id=user.id,
-        token=str(uuid4()),
+        token=new_token,
         expires_at=datetime.utcnow() + timedelta(hours=24),
     )
     db.add(activation_token)
     await db.commit()
 
-    activation_link = f"{BASE_URL}/activate/{activation_token.token}"
+    activation_link = f"{BASE_URL}/activate/{new_token}"
     await email.send_account_activation(
         recipient_email=data.email, activation_url=activation_link
     )

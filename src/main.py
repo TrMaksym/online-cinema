@@ -1,7 +1,10 @@
-from fastapi import FastAPI
+import traceback
+
+from fastapi import FastAPI, Request
 from fastapi.openapi.docs import get_swagger_ui_html
 from fastapi.openapi.utils import get_openapi
 from fastapi.params import Depends
+from starlette.responses import JSONResponse
 
 from src.config.dependencies import get_current_user
 from src.router.movies import router as router_movies
@@ -46,3 +49,23 @@ async def openapi(current_user=Depends(get_current_user)):
         description="API documentation",
         routes=app.routes,
     )
+
+@app.middleware("http")
+async def catch_exceptions_middleware(request: Request, call_next):
+    try:
+        return await call_next(request)
+    except Exception as e:
+        print("Global catch Errors:", e)
+        traceback.print_exc()
+        return JSONResponse(
+            {"detail": "Internal Server Error"},
+            status_code=500
+        )
+
+@app.exception_handler(Exception)
+async def exception_handler(request: Request, exc: Exception):
+    return JSONResponse(
+        status_code=500,
+        content={"error": "Internal Server Error", "message": str(exc)},
+    )
+

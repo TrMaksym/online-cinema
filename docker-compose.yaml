@@ -1,9 +1,15 @@
+version: "3.9"
+
 services:
   db:
     image: postgres:15
     container_name: postgres_theater
     env_file:
       - .env
+    environment:
+      POSTGRES_DB: movies_password
+      POSTGRES_USER: admin_movies
+      POSTGRES_PASSWORD: password_cinema
     ports:
       - "55433:5432"
     volumes:
@@ -11,7 +17,7 @@ services:
     networks:
       - theater_network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $POSTGRES_USER -d $POSTGRES_DB || exit 1"]
+      test: ["CMD-SHELL", "pg_isready -U admin_movies -d movies_password -h localhost || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -24,6 +30,9 @@ services:
       - "3333:80"
     env_file:
       - .env
+    environment:
+      PGADMIN_DEFAULT_EMAIL: maximuschampion2002@gmail.com
+      PGADMIN_DEFAULT_PASSWORD: 2261kol
     depends_on:
       db:
         condition: service_healthy
@@ -43,11 +52,18 @@ services:
   web:
     build: .
     container_name: online_cinema_web
-    command: uvicorn src.main:app --host 0.0.0.0 --port 8000
+    command: >
+      sh -c "
+      until pg_isready -h db -U admin_movies -d movies_password; do
+        echo 'Waiting for Postgres...'; sleep 2;
+      done &&
+      uvicorn src.main:app --host 0.0.0.0 --port 8000
+      "
     env_file:
       - .env
     environment:
-      - PYTHONPATH=/app/src
+      PYTHONPATH: /app/src
+      DATABASE_URL: postgresql+asyncpg://admin_movies:password_cinema@db:5432/movies_password
     ports:
       - "8000:8000"
     volumes:
@@ -66,14 +82,16 @@ services:
     command: celery -A src.celery_app worker --loglevel=info
     env_file:
       - .env
+    environment:
+      PYTHONPATH: /app
+      DATABASE_URL: postgresql+asyncpg://admin_movies:password_cinema@db:5432/movies_password
     volumes:
       - .:/app
     depends_on:
       - redis
+      - db
     networks:
       - theater_network
-    environment:
-      - PYTHONPATH=/app
 
   beat:
     build: .
@@ -81,22 +99,22 @@ services:
     command: celery -A src.celery_app beat --loglevel=info
     env_file:
       - .env
+    environment:
+      PYTHONPATH: /app
+      DATABASE_URL: postgresql+asyncpg://admin_movies:password_cinema@db:5432/movies_password
     volumes:
       - .:/app
     depends_on:
       - redis
+      - db
     networks:
       - theater_network
-    environment:
-      - PYTHONPATH=/app
-
 
 volumes:
   postgres_theater_data:
     driver: local
   pgadmin_theater_data:
     driver: local
-
 
 networks:
   theater_network:

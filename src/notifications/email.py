@@ -31,15 +31,17 @@ class AsyncEmailService(EmailServiceProtocol):
         message.attach(MIMEText(body_text, "plain"))
 
         try:
-            smtp = aiosmtplib.SMTP(
-                hostname=self._smtp_host, port=self._smtp_port, start_tls=self._use_tls
-            )
+            smtp = aiosmtplib.SMTP(hostname=self._smtp_host, port=self._smtp_port, start_tls=False)
             await smtp.connect()
+            await smtp.ehlo()
             if self._use_tls:
                 await smtp.starttls()
+                await smtp.ehlo()
+
             await smtp.login(self._sender_email, self._sender_password)
             await smtp.sendmail(self._sender_email, [recipient], message.as_string())
             await smtp.quit()
+
         except Exception as e:
             logging.exception("Failed to send email")
             raise EmailDeliveryError(f"Failed to send email to {recipient}: {e}")

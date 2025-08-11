@@ -48,7 +48,7 @@ class DevSettings(AppCoreSettings):
         if env_url:
             return env_url
         return (
-            f"postgresql+asyncpg://{self.DB_USER}:{self.DB_PASSWORD}"
+            f"postgresql+psycopg2://{self.DB_USER}:{self.DB_PASSWORD}"
             f"@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"
         )
 
@@ -66,5 +66,10 @@ class TestSettings(AppCoreSettings):
             str(self.ROOT_DIR / "database" / "seed_data" / "test_data.csv"),
         )
 
-settings = DevSettings()
-print(settings.DATABASE_URL)
+try:
+    settings = DevSettings()
+    print(settings.DATABASE_URL)
+except Exception as e:
+    import traceback
+    print("Errors DevSettings!\n")
+    traceback.print_exc()
