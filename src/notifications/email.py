@@ -23,21 +23,25 @@ class AsyncEmailService(EmailServiceProtocol):
         self._sender_password = sender_password
         self._use_tls = use_tls
 
-    async def _send(self, recipient: str, subject: str, body_text: str):
-        message = MIMEMultipart()
+    async def _send(self, recipient: str, subject: str, body_text: str, html: bool = False):
+        message = MIMEMultipart("alternative")
         message["From"] = self._sender_email
         message["To"] = recipient
         message["Subject"] = subject
-        message.attach(MIMEText(body_text, "plain"))
+
+        if html:
+            message.attach(MIMEText(body_text, "html"))
+        else:
+            message.attach(MIMEText(body_text, "plain"))
 
         try:
-            smtp = aiosmtplib.SMTP(hostname=self._smtp_host, port=self._smtp_port, start_tls=False)
+            smtp = aiosmtplib.SMTP(
+                hostname=self._smtp_host,
+                port=self._smtp_port,
+                start_tls=self._use_tls,
+            )
             await smtp.connect()
             await smtp.ehlo()
-            if self._use_tls:
-                await smtp.starttls()
-                await smtp.ehlo()
-
             await smtp.login(self._sender_email, self._sender_password)
             await smtp.sendmail(self._sender_email, [recipient], message.as_string())
             await smtp.quit()
@@ -50,15 +54,20 @@ class AsyncEmailService(EmailServiceProtocol):
         await self._send(recipient, subject, body_text)
 
     async def send_account_activation(
-        self, recipient_email: str, activation_url: str
+        self, recipient_email: str, activation_link: str
     ) -> None:
         subject = "Account Activation"
-        body = (
-            f"Hello,\n\n"
-            f"To activate your account, please follow this link:\n{activation_url}\n\n"
-            f"If you did not request this, just ignore this message."
-        )
-        await self._send(recipient_email, subject, body)
+        html_body = f"""
+        <html>
+          <body>
+            <p>Hello,</p>
+            <p>To activate your account, please follow this link:</p>
+            <p><a href="{activation_link}">{activation_link}</a></p>
+            <p>If you did not request this, just ignore this message.</p>
+          </body>
+        </html>
+        """
+        await self._send(recipient_email, subject, html_body, html=True)
 
     async def notify_activation_success(
         self, recipient_email: str, dashboard_url: str

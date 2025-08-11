@@ -1,3 +1,4 @@
+import logging
 import os
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import delete
@@ -6,7 +7,10 @@ from sqlalchemy.future import select
 from uuid import uuid4
 from datetime import datetime, timedelta
 
+from starlette.responses import RedirectResponse
+
 from src.config.dependencies import get_email_sender, get_current_user
+from src.notifications.exceptions import EmailDeliveryError
 from src.schemas.accounts import ResendActivationEmailRequest, ChangePasswordRequest
 from src.schemas.accounts import (
     RegisterRequest,
@@ -27,7 +31,7 @@ from src.database.models.accounts import (
     UserResetPassword,
 )
 from src.notifications.email import AsyncEmailService
-from src.tasks.accounts import send_reset_email_async
+from src.tasks.accounts import send_activation_email_task, send_reset_email_async
 from src.validation.accounts import validate_password_complexity
 
 router = APIRouter()
@@ -41,7 +45,6 @@ BASE_URL = os.getenv("BASE_URL", "http://localhost:8000")
 async def register_user(
     data: RegisterRequest,
     db: AsyncSession = Depends(get_async_session),
-    email_service: AsyncEmailService = Depends(get_email_sender),
 ):
     result = await db.execute(select(User).where(User.email == data.email))
     existing_user = result.scalars().first()
@@ -79,15 +82,17 @@ async def register_user(
     db.add(activation_token)
     await db.commit()
 
-    activation_link = f"{BASE_URL}/activate/{token}"
+    base_url = os.getenv("BASE_URL")
 
-    await email_service.send_account_activation(data.email, activation_link)
+    activation_link = f"{base_url}/api/v1/accounts/activate/{token}"
+    logging.info(f"Activation link: {activation_link}")
+
+    send_activation_email_task.delay(data.email, activation_link)
 
     return RegisterResponse(
         email=data.email,
         message="Registration successful. Please check your email to activate your account.",
     )
-
 
 @router.post("/reset-activation/")
 async def resend_activation(
@@ -121,6 +126,7 @@ async def resend_activation(
     db.add(activation_token)
     await db.commit()
 
+    BASE_URL = "http://63.176.4.74:8000/api/v1/accounts"
     activation_link = f"{BASE_URL}/activate/{new_token}"
     await email.send_account_activation(
         recipient_email=data.email, activation_url=activation_link

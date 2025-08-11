@@ -1,17 +1,15 @@
 from datetime import datetime
+import asyncio
 
 from sqlalchemy import delete
 
-from celery_app import celery_app
+from src.celery_app import celery_app
 from src.database.session_postgresql import async_session_maker
 from src.database.models.accounts import ActivationToken, UserResetPassword
 
 
 @celery_app.task
 def cleanup_expired_tokens():
-
-    import asyncio
-
     asyncio.run(_cleanup_expired_tokens_async())
 
 

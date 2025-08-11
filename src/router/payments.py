@@ -16,6 +16,7 @@ from src.database.models.orders import Order
 from src.database.models.payments import Payment
 from src.notifications.email import AsyncEmailService
 from src.schemas.payments import PaymentResponse, PaymentStatusEnum
+from src.tasks.accounts import send_reset_email_async
 
 router = APIRouter()
 
@@ -62,7 +63,7 @@ async def initiate_payment(
 async def mock_payment_webhook(
     request: Request,
     db: AsyncSession = Depends(get_async_session),
-    email_service: AsyncEmailService = Depends(),
+    email_service: AsyncEmailService = Depends(send_reset_email_async),
 ):
     try:
         payload = await request.json()

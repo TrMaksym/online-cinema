@@ -48,6 +48,11 @@ services:
       - "6379:6379"
     networks:
       - theater_network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
 
   web:
     build: .
@@ -85,6 +90,8 @@ services:
     environment:
       PYTHONPATH: /app
       DATABASE_URL: postgresql+asyncpg://admin_movies:password_cinema@db:5432/movies_password
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/0
     volumes:
       - .:/app
     depends_on:
@@ -102,6 +109,8 @@ services:
     environment:
       PYTHONPATH: /app
       DATABASE_URL: postgresql+asyncpg://admin_movies:password_cinema@db:5432/movies_password
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/0
     volumes:
       - .:/app
     depends_on:

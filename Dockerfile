@@ -5,8 +5,9 @@ RUN apt-get update && apt-get install -y \
     libpq-dev \
     curl \
     postgresql-client \
-    netcat \
+    netcat-openbsd \
     && rm -rf /var/lib/apt/lists/*
+
 
 RUN pip install --upgrade pip
 RUN pip install poetry==2.1.3

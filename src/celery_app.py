@@ -5,7 +5,7 @@ celery_app = Celery(
     "online_cinema",
     broker="redis://redis:6379/0",
     backend="redis://redis:6379/0",
-    include=["src.tasks.accounts"],
+    include=["src.tasks"],
 )
 
 celery_app.conf.timezone = "UTC"
