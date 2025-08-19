@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Optional
+from typing import Optional, List
 import uuid as py_uuid
 from sqlalchemy.dialects.postgresql import UUID
 
@@ -101,6 +101,7 @@ class Movie(Base):
     description: Mapped[str] = mapped_column(String(255), nullable=False)
     price: Mapped[float] = mapped_column(DECIMAL(10, 2), nullable=False)
     certification_id: Mapped[int] = mapped_column(ForeignKey("certifications.id"), nullable=False)
+    order_items: Mapped[List["OrderItem"]] = relationship("OrderItem", back_populates="movie")
 
     certification: Mapped["Certification"] = relationship("Certification", back_populates="movies")
     genres: Mapped[list[Genre]] = relationship("Genre", secondary=movie_genres, back_populates="movies")
