@@ -1,4 +1,5 @@
 import asyncio
+import logging
 from datetime import datetime
 from sqlalchemy import delete
 
@@ -10,7 +11,7 @@ from src.notifications.email import AsyncEmailService
 
 def get_email_service() -> AsyncEmailService:
     return AsyncEmailService(
-        smtp_host="smtp.example.com",
+        smtp_host="smtp.gmail.com",
         smtp_port=587,
         sender_email="maximuschampion2002@gmail.com",
         sender_password="mqyohjngeptgdpkv",
@@ -54,13 +55,19 @@ def send_reset_email_async(email: str, token: str):
 
 async def _send_reset_email(email: str, token: str):
     email_service = get_email_service()
-    reset_link = f"http://127.0.0.1:8000/reset-password/{token}"
+    reset_link = f"http://172.0.0.1:8000/api/v1/account/reset-password/{token}"
     await email_service.send_password_reset_request(email, reset_link)
 
 
-@celery_app.task
+@celery_app.task(ignore_result=True)
 def send_activation_email_task(email, activation_link):
-    asyncio.run(_send_email(email, activation_link))
+    try:
+        asyncio.run(_send_email(email, activation_link))
+        logging.info("Activation email sent successfully.")
+    except Exception as e:
+        logging.error(f"Error sending activation email: {e}")
+    return None
+
 
 
 async def _send_email(email, activation_link):

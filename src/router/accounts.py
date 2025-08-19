@@ -1,6 +1,6 @@
 import logging
 import os
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Body
 from sqlalchemy import delete
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
@@ -11,7 +11,8 @@ from starlette.responses import RedirectResponse
 
 from src.config.dependencies import get_email_sender, get_current_user
 from src.notifications.exceptions import EmailDeliveryError
-from src.schemas.accounts import ResendActivationEmailRequest, ChangePasswordRequest
+from src.schemas.accounts import ResendActivationEmailRequest, ChangePasswordRequest, LogoutRequest, \
+    ResetPasswordRequest
 from src.schemas.accounts import (
     RegisterRequest,
     RegisterResponse,
@@ -36,7 +37,8 @@ from src.validation.accounts import validate_password_complexity
 
 router = APIRouter()
 
-BASE_URL = os.getenv("BASE_URL", "http://localhost:8000")
+BASE_URL = os.getenv("BASE_URL", "http://127.0.0.1:8000")
+API_PREFIX = "/api/v1/accounts"
 
 
 @router.post(
@@ -82,9 +84,7 @@ async def register_user(
     db.add(activation_token)
     await db.commit()
 
-    base_url = os.getenv("BASE_URL")
-
-    activation_link = f"{base_url}/api/v1/accounts/activate/{token}"
+    activation_link = f"{BASE_URL}{API_PREFIX}/activate/{token}"
     logging.info(f"Activation link: {activation_link}")
 
     send_activation_email_task.delay(data.email, activation_link)
@@ -126,8 +126,7 @@ async def resend_activation(
     db.add(activation_token)
     await db.commit()
 
-    BASE_URL = "http://63.176.4.74:8000/api/v1/accounts"
-    activation_link = f"{BASE_URL}/activate/{new_token}"
+    activation_link = f"{BASE_URL}{API_PREFIX}/activate/{new_token}"
     await email.send_account_activation(
         recipient_email=data.email, activation_url=activation_link
     )
@@ -170,8 +169,11 @@ async def login(data: LoginRequest, db: AsyncSession = Depends(get_async_session
 
 
 @router.post("/logout/")
-async def logout(refresh_token: str, db: AsyncSession = Depends(get_async_session)):
-    await db.execute(delete(RefreshToken).where(RefreshToken.token == refresh_token))
+async def logout(
+    request: LogoutRequest,
+    db: AsyncSession = Depends(get_async_session)
+):
+    await db.execute(delete(RefreshToken).where(RefreshToken.token == request.refresh_token))
     await db.commit()
     return {"message": "Successfully logged out."}
 
@@ -247,18 +249,20 @@ async def activate_user(token: str, db: AsyncSession = Depends(get_async_session
     return {"message": "Account activated successfully"}
 
 
-@router.put("/reset-password/{token}")
-async def reset_password(
-    token: str, new_password: str, db: AsyncSession = Depends(get_async_session)
-):
+@router.put("/reset-password/")
+async def reset_password(payload: ResetPasswordRequest, db: AsyncSession = Depends(get_async_session)):
+    token = payload.token
+    new_password = payload.new_password
+
     result = await db.execute(
-        select(PasswordResetToken).where(PasswordResetToken.token == token)
+        select(UserResetPassword).where(UserResetPassword.token == token)
     )
     reset_token = result.scalars().first()
 
     if not reset_token or reset_token.expires_at < datetime.utcnow():
         raise HTTPException(
-            status_code=400, detail="Invalid or expired password reset token"
+            status_code=400,
+            detail="Invalid or expired password reset token"
         )
 
     user = await db.get(User, reset_token.user_id)
@@ -266,11 +270,10 @@ async def reset_password(
     if not validate_password_complexity(new_password):
         raise HTTPException(
             status_code=400,
-            detail="Password must be at least 8 characters long and include an uppercase letter, number, and special character.",
+            detail="Password must be at least 8 characters long and include an uppercase letter, number, and special character."
         )
 
     user.hashed_password = get_password_hash(new_password)
-
     await db.delete(reset_token)
     await db.commit()
 
