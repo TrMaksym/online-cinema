@@ -62,20 +62,6 @@ class RegisterRequest(BaseModel):
     email: EmailStr
     password: str
 
-    @validator("password")
-    def validate_password(cls, v):
-        if (
-            len(v) < 8
-            or not re.search(r"[A-Z]", v)
-            or not re.search(r"[a-z]", v)
-            or not re.search(r"[0-9]", v)
-            or not re.search(r"[!@#$%^&*]", v)
-        ):
-            raise ValueError(
-                "Password must be at least 8 characters long, contain at least one uppercase, "
-            )
-        return v
-
 
 class RegisterResponse(BaseModel):
     email: EmailStr
@@ -110,3 +96,6 @@ class ChangePasswordRequest(BaseModel):
     email: str
     current_password: str
     new_password: str
+
+class LogoutRequest(BaseModel):
+    refresh_token: str
