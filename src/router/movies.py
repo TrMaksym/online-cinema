@@ -55,7 +55,7 @@ async def get_stars_by_ids(star_ids: list[int], db: AsyncSession):
     return result.scalars().all()
 
 
-@router.post("/", response_model=MovieSchema)
+@router.post("/", response_model=MovieSchema, status_code=status.HTTP_201_CREATED)
 async def create_movie(
     data: MovieCreateSchema, db: AsyncSession = Depends(get_async_session)
 ):
