@@ -118,9 +118,17 @@ class LikeDislikeResponseSchema(BaseModel):
         orm_mode = True
 
 
+class GenreWithMovieCount(BaseModel):
+    id: int
+    name: constr(max_length=100)
+    movie_count: int
+
+    class Config:
+        orm_mode = True
+
+
 class CommentCreateSchema(BaseModel):
     user_id: int
-    movie_id: int
     parent_comment_id: Optional[int] = None
     text: constr(min_length=1)
 
@@ -129,12 +137,13 @@ class CommentSchema(BaseModel):
     id: int
     user_id: int
     movie_id: int
-    parent_comment_id: Optional[int]
+    parent_id: Optional[int]
     text: str
     replies: Optional[List["CommentSchema"]] = []
 
-    class Config:
-        orm_mode = True
+    model_config = {
+        "from_attributes": True
+    }
 
 
 class FavoriteCreateSchema(BaseModel):
