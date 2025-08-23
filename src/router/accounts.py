@@ -128,7 +128,7 @@ async def resend_activation(
 
     activation_link = f"{BASE_URL}{API_PREFIX}/activate/{new_token}"
     await email.send_account_activation(
-        recipient_email=data.email, activation_url=activation_link
+        recipient_email=data.email, activation_link=activation_link
     )
 
     return RegisterResponse(
