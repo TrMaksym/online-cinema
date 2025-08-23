@@ -2,10 +2,11 @@ from datetime import datetime, timedelta
 
 import pytest
 from httpx import AsyncClient, ASGITransport
-from unittest.mock import AsyncMock, Mock, patch
+from unittest.mock import AsyncMock, Mock, patch, ANY
 from asgi_lifespan import LifespanManager
 from sqlalchemy.sql.functions import user
 
+from src.config.dependencies import get_email_sender
 from src.main import app
 from src.database.models.accounts import User
 from src.security.password import get_password_hash
@@ -318,7 +319,7 @@ async def test_reset_password_expired_token(override_dependencies, mock_db_sessi
 
 @pytest.mark.asyncio
 async def test_resend_activation_success(override_dependencies, mock_db_session):
-    user = Mock(spec=User)
+    user = Mock()
     user.id = 1
     user.email = "email@example.com"
     user.is_active = False
@@ -333,9 +334,14 @@ async def test_resend_activation_success(override_dependencies, mock_db_session)
 
     mock_db_session.execute.side_effect = execute
 
+    mock_email_service = AsyncMock()
+
+    app.dependency_overrides[get_email_sender] = lambda: mock_email_service
+
     async with LifespanManager(app):
         async with AsyncClient(
-            transport=ASGITransport(app=app), base_url="http://test"
+            transport=ASGITransport(app=app),
+            base_url="http://test"
         ) as ac:
             response = await ac.post(
                 "/api/v1/accounts/reset-activation/",
@@ -344,6 +350,11 @@ async def test_resend_activation_success(override_dependencies, mock_db_session)
 
     assert response.status_code == 200
     assert response.json()["message"] == "Registration successful. Please check your email to activate your account."
+    mock_email_service.send_account_activation.assert_awaited_once_with(
+        recipient_email=user.email,
+        activation_link=ANY
+    )
+    app.dependency_overrides.clear()
 
 @pytest.mark.asyncio
 async def test_resend_activation_user_not_found(override_dependencies, mock_db_session):
@@ -496,7 +507,10 @@ async def test_forgot_password_inactive_user_no_email(override_dependencies, moc
     result_mock = Mock()
     result_mock.scalars.return_value = scalars_mock
 
-    mock_db_session.execute = AsyncMock(return_value=result_mock)
+    async def execute(stmt):
+        return result_mock
+
+    mock_db_session.execute.side_effect = execute
 
     async with LifespanManager(app):
         async with AsyncClient(
