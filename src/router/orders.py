@@ -1,13 +1,13 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, HTTPException, status, Query, Body
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from datetime import datetime
 from typing import List, Optional
 
-from src.database.models.orders import Order, OrderItem
+from src.database.models.orders import Order, OrderItem, OrderStatusEnum
 from src.database.models.movies import Movie
 from src.database.models.shopping_cart import Cart
-from src.schemas.orders import OrderResponse
+from src.schemas.orders import OrderResponse, MovieInOrder
 from src.config.dependencies import (
     get_async_session,
     get_current_user,
@@ -45,18 +45,18 @@ async def create_order_from_cart(
     movies_result = await db.execute(select(Movie).where(Movie.id.in_(available_ids)))
     movies = movies_result.scalars().all()
 
-    total_price = sum(movie.price for movie in movies)
+    total_amount = sum(movie.price for movie in movies)
     new_order = Order(
         user_id=current_user.id,
         created_at=datetime.utcnow(),
-        total_price=total_price,
-        status="paid",
+        total_amount=total_amount,
+        status=OrderStatusEnum.paid,
     )
     db.add(new_order)
     await db.flush()
 
     for movie in movies:
-        db.add(OrderItem(order_id=new_order.id, movie_id=movie.id))
+        db.add(OrderItem(order_id=new_order.id, movie_id=movie.id, price_at_order=movie.price))
 
     for item in cart.items:
         db.delete(item)
@@ -66,15 +66,15 @@ async def create_order_from_cart(
     return OrderResponse(
         id=new_order.id,
         created_at=new_order.created_at,
-        total_price=new_order.total_price,
         status=new_order.status,
-        movies=[{"id": m.id, "name": m.name, "price": m.price} for m in movies],
+        total_price=new_order.total_amount,
+        movies=[MovieInOrder(id=m.id, name=m.name, price=m.price) for m in movies],
     )
 
 
 @router.post("/", response_model=OrderResponse, status_code=status.HTTP_201_CREATED)
 async def create_order(
-    movie_ids: List[int],
+    movie_ids: List[int] = Body(..., embed=True),
     db: AsyncSession = Depends(get_async_session),
     current_user=Depends(get_current_user),
 ):
@@ -84,7 +84,8 @@ async def create_order(
     purchased_result = await db.execute(
         select(OrderItem.movie_id).join(Order).where(Order.user_id == current_user.id)
     )
-    already_purchased = {r[0] for r in purchased_result.all()}
+    already_purchased = set(purchased_result.scalars().all())
+
     filtered_ids = [mid for mid in movie_ids if mid not in already_purchased]
     if not filtered_ids:
         raise HTTPException(status_code=400, detail="All movies already purchased.")
@@ -94,30 +95,34 @@ async def create_order(
     if not movies:
         raise HTTPException(status_code=404, detail="No available movies found.")
 
-    total_price = sum(m.price for m in movies)
+    total_amount = sum(m.price for m in movies)
     new_order = Order(
         user_id=current_user.id,
         created_at=datetime.utcnow(),
-        total_price=total_price,
-        status="pending",
+        total_amount=total_amount,
+        status=OrderStatusEnum.pending,
     )
     db.add(new_order)
     await db.flush()
+    await db.refresh(new_order)
 
     for movie in movies:
         db.add(
             OrderItem(
-                order_id=new_order.id, movie_id=movie.id, price_at_order=movie.price
+                order_id=new_order.id,
+                movie_id=movie.id,
+                price_at_order=movie.price,
             )
         )
 
     await db.commit()
+
     return OrderResponse(
         id=new_order.id,
         created_at=new_order.created_at,
         status=new_order.status,
-        total_price=new_order.total_price,
-        movies=[{"id": m.id, "name": m.name, "price": m.price} for m in movies],
+        total_price=new_order.total_amount,
+        movies=[MovieInOrder(id=m.id, name=m.name, price=m.price) for m in movies],
     )
 
 
