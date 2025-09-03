@@ -21,7 +21,7 @@ from src.tasks.accounts import send_reset_email_async
 router = APIRouter()
 
 
-@router.post("/payments/initiate", response_model=PaymentResponse)
+@router.post("/initiate", response_model=PaymentResponse)
 async def initiate_payment(
     order_id: int,
     db: AsyncSession = Depends(get_async_session),
@@ -49,7 +49,7 @@ async def initiate_payment(
     payment = Payment(
         order_id=order_id,
         user_id=current_user.id,
-        amount=order.total_price,
+        amount=order.total_amount,
         status=PaymentStatusEnum.pending,
     )
     db.add(payment)
@@ -59,7 +59,7 @@ async def initiate_payment(
     return payment
 
 
-@router.post("/payments/webhook")
+@router.post("/webhook")
 async def mock_payment_webhook(
     request: Request,
     db: AsyncSession = Depends(get_async_session),
@@ -79,7 +79,7 @@ async def mock_payment_webhook(
         )
 
     payment_result = await db.execute(select(Payment).where(Payment.id == payment_id))
-    payment = payment_result.scalar_one_or_none()
+    payment = await payment_result.scalar_one_or_none()
     if not payment:
         raise HTTPException(status_code=404, detail="Payment not found")
 
@@ -108,7 +108,7 @@ async def get_payment_history(
     return result.scalars().all()
 
 
-@router.get("/payments/admin", response_model=list[PaymentResponse])
+@router.get("/admin", response_model=list[PaymentResponse])
 async def get_all_payments_for_admin(
     user_id: Optional[int] = None,
     status: Optional[PaymentStatusEnum] = None,
@@ -126,4 +126,5 @@ async def get_all_payments_for_admin(
         stmt = stmt.where(*filters)
 
     result = await db.execute(stmt)
-    return result.scalars().all()
+    payments = await result.scalars().all()
+    return payments

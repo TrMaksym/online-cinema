@@ -7,6 +7,7 @@ from sqlalchemy.orm import relationship, Mapped, mapped_column
 from .base import Base
 
 class PaymentStatusEnum(str, PyEnum):
+    pending = "pending"
     successful = "successful"
     cancelled = "cancelled"
     refunded = "refunded"
@@ -43,4 +44,3 @@ class PaymentItem(Base):
     payment = relationship("Payment", back_populates="payment_items")
     order_item = relationship("OrderItem", back_populates="payment_items")
 
-from .orders import Order
