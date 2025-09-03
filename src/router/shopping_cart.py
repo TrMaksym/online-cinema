@@ -56,7 +56,7 @@ async def remove_from_cart(
     )
     item = result.scalar_one_or_none()
     if not item:
-        raise HTTPException(status_code=400, detail="Movie not in cart")
+        raise HTTPException(status_code=404, detail="Movie not in cart")
 
     await db.delete(item)
     await db.commit()
