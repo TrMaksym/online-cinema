@@ -86,7 +86,7 @@ Supports:
 ## 🐳 Docker (recommended)
 
 ```bash
-git clone https://github.com/your-username/online-cinema.git
+git clone https://github.com/TrMaksym/online-cinema.git
 cd online-cinema
 cp .env.sample .env
 docker-compose up --build
@@ -94,7 +94,7 @@ docker-compose up --build
 ## ⚡ Local Development (without Docker)
 ```bash
 # Clone project
-git clone https://github.com/your-username/online-cinema.git
+git clone https://github.com/TrMaksym/online-cinema.git
 cd online-cinema
 
 # Create virtual environment
