@@ -11,7 +11,6 @@ Supports:
 - Role-based access (User, Moderator, Admin)  
 - Asynchronous tasks with Celery & Celery Beat  
 - Fully dockerized setup with PostgreSQL, Redis, MinIO
-- link http://63.176.4.74:8000/docs
 
 ---
 
